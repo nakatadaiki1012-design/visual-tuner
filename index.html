@@ -65,6 +65,7 @@
   .seg-btn{ flex:1 1 auto; padding:.45rem .5rem; border:1px solid var(--border); border-radius:calc(var(--radius) * .5); background:var(--btn); color:var(--text); font-size:.8rem; cursor:pointer; }
   .seg-btn.active{ background:var(--accent); color:#0a0a14; font-weight:700; box-shadow:0 0 12px var(--accent); }
   .theme-card{ text-align:left; padding:.6rem .7rem; border:1px solid var(--border); border-radius:calc(var(--radius) * .6); background:var(--btn); cursor:pointer; color:var(--text); }
+  body:not(.admin) .admin-only{ display:none !important; }
   .theme-card.locked{ opacity:.38; filter:grayscale(1); position:relative; }
   .theme-card.locked::after{ content:'🔒'; position:absolute; top:.4rem; right:.5rem; font-size:1.1rem; }
   .theme-card.active{ outline:2px solid var(--accent); box-shadow:0 0 16px var(--accent); }
@@ -123,7 +124,7 @@
     <div class="flex-1"></div>
     <button id="btnRecords" class="btn" title="記録と実績 (R)">🏆 <span id="lvBadge">Lv.1</span></button>
     <button id="btnMic" class="btn" title="マイク (M)">🎤 <span class="hidden sm:inline">マイク開始</span></button>
-    <button id="btnTest" class="btn" title="テスト音 (T)">🔊 <span id="btnTestLabel" class="hidden sm:inline">テスト音 A4</span></button>
+    <button id="btnTest" class="btn admin-only" title="テスト音 (T)">🔊 <span id="btnTestLabel" class="hidden sm:inline">テスト音 A4</span></button>
     <button id="btnTheme" class="btn" title="テーマ一覧 (G) / 切替 (← →)">🎨<span class="hidden sm:inline">テーマ</span></button>
     <button id="btnSettings" class="btn" title="設定 (S)">⚙<span class="hidden sm:inline">設定</span></button>
   </header>
@@ -219,7 +220,9 @@
     <input id="droneVol" type="range" min="0" max="1" step="0.05">
   </div>
 
-  <div>
+  <div id="adminSection" class="panel" style="padding:.7rem;display:none">
+    <div class="label" style="color:var(--accent)">🛠 管理者モード</div>
+    <label class="flex items-center gap-2 text-sm mb-2"><input id="adminUnlock" type="checkbox"> 全テーマを解放する</label>
     <div class="label">テスト音シンセ</div>
     <div class="flex items-center gap-2 text-sm mb-2">
       <span>音</span><select id="testNoteSel"></select>
@@ -229,6 +232,7 @@
     <label class="flex items-center gap-2 text-sm mt-1"><input id="vib" type="checkbox"> ゆらぎ（ロック⇄解除の演出チェック）</label>
     <div class="text-sm flex justify-between mt-2"><span>スピーカー音量</span><span id="volVal">50%</span></div>
     <input id="vol" type="range" min="0" max="1" step="0.05">
+    <button id="btnAdminOff" class="btn mt-2" style="font-size:.75rem">管理者モードを終了</button>
   </div>
 
   <div>
@@ -251,6 +255,12 @@
   </div>
 
   <div>
+    <div class="label">セントメーターの見た目</div>
+    <div class="seg" data-seg="meterStyle"></div>
+    <div class="text-xs muted mt-1">下のセントメーターの表示を選べます。どれも真ん中（緑）に合えば PERFECT です。</div>
+  </div>
+
+  <div>
     <div class="label">画面のゆれ</div>
     <div class="seg" data-seg="shake"></div>
     <div class="text-xs muted mt-1">合った瞬間などに画面がゆれる演出の強さ。「自動」はスマホでは控えめになります。</div>
@@ -263,7 +273,7 @@
   </div>
 
   <div class="text-xs muted leading-relaxed">
-    ショートカット：<b>M</b> マイク / <b>T</b> テスト音 / <b>S</b> 設定 / <b>1-9</b> / <b>← →</b> テーマ（スマホは演出エリアを左右にスワイプ）<br>
+    ショートカット：<b>M</b> マイク / <b>S</b> 設定 / <b>1-9</b> / <b>← →</b> テーマ（スマホは演出エリアを左右にスワイプ）<br>
     ±3セント以内に入ると「PERFECT」。合い続けるほど演出が激しくなります。
   </div>
   <div class="text-right"><button id="btnUnlock" class="btn" style="font-size:.65rem;padding:.25rem .5rem;opacity:.6">🔑</button></div>
@@ -276,7 +286,7 @@
     <p class="text-sm leading-relaxed">ピッチが <b class="accent">±3セント</b> に入ると演出が弾ける！<br>合い続けるほどコンボが伸びて、どんどん派手になります。</p>
     <div class="grid gap-2">
       <button id="startMic" class="btn justify-center text-base py-3">🎤 マイクで始める</button>
-      <button id="startTest" class="btn justify-center text-base py-3">🔊 テスト音で試す（マイク不要）</button>
+      <button id="startTest" class="btn justify-center text-base py-3 admin-only">🔊 テスト音で試す（マイク不要）</button>
     </div>
     <p class="text-xs muted">マイクの音はこの端末の中だけで処理され、どこにも送信されません。</p>
   </div>
@@ -345,7 +355,7 @@ const TRANSPOSE = { C:0, Bb:2, Eb:9, F:7 };                     // 実音→記�
 const TRANSP_HINT = { C:'実音（ピアノ・弦楽器・フルート等）', Bb:'B♭管：クラリネット・トランペット・テナーサックス等', Eb:'E♭管：アルトサックス・バリトンサックス等', F:'F管：ホルン・イングリッシュホルン等' };
 
 /* ===================== 設定の保存/読み込み ===================== */
-const DEFAULTS = { theme:'neon', ref:440, transp:'C', temper:'equal', root:0, gate:0.01, fx:1, detune:0, testNote:0, vib:false, vol:0.5, quality:'auto', shake:'auto', scopeGain:2, chord:'off', drone:false, droneVol:0.4 };
+const DEFAULTS = { theme:'neon', ref:440, transp:'C', temper:'equal', root:0, gate:0.01, fx:1, detune:0, testNote:0, vib:false, vol:0.5, quality:'auto', shake:'auto', meterStyle:'bar', admin:false, scopeGain:2, chord:'off', drone:false, droneVol:0.4 };
 const settings = Object.assign({}, DEFAULTS);
 try { Object.assign(settings, JSON.parse(localStorage.getItem('visualTuner.settings')||'{}')); } catch(e) {}
 /* ===================== 処理落ち対策（自動画質調整） ===================== */
@@ -698,6 +708,7 @@ function tlvOf(xp){ let l=1; for(let i=0;i<TLV_XP.length;i++) if(xp>=TLV_XP[i]) 
 // ===== テーマのアンロック：5種類ずつ。前の5種類をすべて「テーマLv.3」にすると次の5種類が解放 =====
 const UNLOCK_GROUP=5, UNLOCK_LV=3;
 const UNLOCK_PASS='visualtuner';   // 全テーマ解放パスワード（設定画面の小さな🔑ボタン）
+const ADMIN_PASS='tuneradmin';     // 管理者モードのパスワード（テスト音・全テーマ解放の切り替え）
 function unlockedCount(){ const N=THEME_KEYS.length; if(PROG.unlockAll) return N; let g=1;
   while(g*UNLOCK_GROUP<N && THEME_KEYS.slice((g-1)*UNLOCK_GROUP,g*UNLOCK_GROUP).every(k=>tlvOf(PROG.tlv[k]||0)>=UNLOCK_LV)) g++;
   return Math.min(N,g*UNLOCK_GROUP); }
@@ -5430,6 +5441,7 @@ function render(dt){
 function drawMeter(){
   const p=theme().palette, w=mcv.width/DPR, h=mcv.height/DPR, c=mctx;
   c.setTransform(DPR,0,0,DPR,0,0); c.clearRect(0,0,w,h);
+  if(settings.meterStyle && settings.meterStyle!=='bar'){ drawMeterAlt(settings.meterStyle,c,w,h,p); return; }
   const pad=16, x0=pad, x1=w-pad, X=v=>x0+(clamp(v,-50,50)+50)/100*(x1-x0);
   const yT=22, yB=h-16, font=p.font, small=p.pixel?7:10;
   // 背景バー
@@ -5477,6 +5489,50 @@ function drawMeter(){
   c.shadowBlur=0; c.globalAlpha=1;
 }
 
+// セントメーターのほかの見た目（どれも「目標からのズレ」を表示。真ん中＝PERFECT）
+const MSTATE={ ph:0 };
+function drawMeterAlt(style,c,w,h,p){
+  const d=S.active?clamp(S.devDisp,-50,50):0, on=S.active, lock=S.locked, col=devColor(p,d,on), font=p.font, small=p.pixel?7:10, L=CONFIG.LOCK_CENTS;
+  const lbl=(t,x,y,al='center',sz=small,a=0.6)=>{ c.font=`${sz}px ${font}`; c.textAlign=al; c.textBaseline='middle'; c.fillStyle=rgba(p.text,a); c.fillText(t,x,y); };
+  if(style==='needle'){ // アナログ針（扇形のメーター）
+    const cx=w/2, R=Math.min(h*2.4,w*0.42), cy=h-6+R*0.78, A=0.62, ang=v=>-Math.PI/2+v/50*A;
+    c.lineWidth=10; for(const [a0,a1,cc,al] of [[-50,-L,p.flat,0.35],[-L,L,p.good,0.5+0.5*S.intensity],[L,50,p.sharp,0.35]]){ c.strokeStyle=rgba(cc,al); c.beginPath(); c.arc(cx,cy,R,ang(a0),ang(a1)); c.stroke(); }
+    c.strokeStyle=rgba(p.text,0.5); c.lineWidth=1; c.beginPath(); for(let v=-50;v<=50;v+=5){ const a=ang(v), l=v%25===0?14:v%10===0?10:6; c.moveTo(cx+Math.cos(a)*(R-6),cy+Math.sin(a)*(R-6)); c.lineTo(cx+Math.cos(a)*(R-6-l),cy+Math.sin(a)*(R-6-l)); } c.stroke();
+    for(const v of [-50,-25,0,25,50]){ const a=ang(v); lbl((v>0?'+':'')+v,cx+Math.cos(a)*(R+12),cy+Math.sin(a)*(R+12)); }
+    const a=ang(d); c.globalAlpha=on?1:0.35; c.strokeStyle=rgba(col,1); c.lineWidth=3; c.shadowColor=rgba(col,1); c.shadowBlur=on?10:0;
+    c.beginPath(); c.moveTo(cx+Math.cos(a)*(R*0.55),cy+Math.sin(a)*(R*0.55)); c.lineTo(cx+Math.cos(a)*(R+4),cy+Math.sin(a)*(R+4)); c.stroke(); c.shadowBlur=0; c.globalAlpha=1;
+    lbl(on?fmtC(S.dev):'--',w-12,h/2,'right',small+3,0.85); lbl(lock?'PERFECT':'',12,h/2,'left',small+3,0.9);
+  }
+  else if(style==='led'){ // LEDブロック（5セントごと）
+    const n=21, gap=3, bw=(w-24-gap*(n-1))/n, bh=Math.min(h-30,34), y=(h-bh)/2-4, cur=Math.round(d/5)+10;
+    for(let i=0;i<n;i++){ const x=12+i*(bw+gap), base=i<10?p.flat:i>10?p.sharp:p.good, hit=on&&(i===cur||(i===10&&lock)), near=on&&Math.abs(i-cur)===1&&!lock;
+      c.fillStyle=rgba(base,hit?1:near?0.4:0.12); if(hit){ c.shadowColor=base; c.shadowBlur=12; } c.fillRect(x,y,bw,bh); c.shadowBlur=0; }
+    for(const v of [-50,-25,0,25,50]) lbl((v>0?'+':'')+v,12+(v/5+10)*(bw+gap)+bw/2,y+bh+10);
+  }
+  else if(style==='strobe'){ // ストロボ：低いと左へ、高いと右へ流れ、合うとピタッと止まる
+    MSTATE.ph+=(on?d:0)*0.6*(1/60); const rows=3, rh=(h-28)/rows, sw=18;
+    for(let r=0;r<rows;r++){ const y=6+r*rh, sp=(r+1), off=((MSTATE.ph*sp%(sw*2))+sw*2)%(sw*2);
+      c.fillStyle=rgba(p.text,0.06); c.fillRect(12,y,w-24,rh-3); c.save(); c.beginPath(); c.rect(12,y,w-24,rh-3); c.clip();
+      c.fillStyle=lock?rgba(p.good,0.9):on?rgba(col,0.75):rgba(p.text,0.15); for(let x=12-sw*2+off;x<w;x+=sw*2) c.fillRect(x,y,sw,rh-3); c.restore(); }
+    lbl(on?(lock?'■ 止まった！ PERFECT':d<0?'◀ 低い（左へ流れる）':'高い（右へ流れる） ▶'):'音を出すと動きます',w/2,h-10,'center',small+1,0.8);
+  }
+  else if(style==='digital'){ // デジタル数字
+    const t=on?(d>=0?'+':'−')+Math.abs(d).toFixed(1):'--.-';
+    c.font=`bold ${Math.min(h*0.62,46)}px ${font}`; c.textAlign='center'; c.textBaseline='middle'; c.fillStyle=on?rgba(col,1):rgba(p.text,0.3); if(on){ c.shadowColor=rgba(col,1); c.shadowBlur=lock?18:6; }
+    c.fillText(t,w/2,h/2-6); c.shadowBlur=0; lbl('セント',w/2+Math.min(h*0.62,46)*1.6,h/2-2,'left',small+2,0.7);
+    lbl(on?(lock?'PERFECT!':d<0?'低い ▲上げて':'高い ▼下げて'):'',12,h/2,'left',small+3,0.85);
+    const bw=w*0.6, bx=w*0.2, by=h-12; c.fillStyle=rgba(p.text,0.15); c.fillRect(bx,by,bw,4); c.fillStyle=rgba(p.good,0.8); c.fillRect(bx+bw/2-bw*L/100,by,bw*L/50,4); c.fillStyle=rgba(col,on?1:0.3); c.fillRect(bx+bw/2+d/50*bw/2-3,by-3,6,10);
+  }
+  else { // 丸ダイヤル：ズレの量だけリングが伸びる
+    const cx=w/2, cy=h/2-2, R=Math.min(h/2-6,40);
+    c.lineWidth=8; c.strokeStyle=rgba(p.text,0.12); c.beginPath(); c.arc(cx,cy,R,0,Math.PI*2); c.stroke();
+    c.strokeStyle=rgba(p.good,0.5+0.5*S.intensity); c.beginPath(); c.arc(cx,cy,R,-Math.PI/2-L/50*Math.PI,-Math.PI/2+L/50*Math.PI); c.stroke();
+    if(on){ c.strokeStyle=rgba(col,1); c.shadowColor=rgba(col,1); c.shadowBlur=10; c.beginPath(); if(d>=0) c.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+d/50*Math.PI); else c.arc(cx,cy,R,-Math.PI/2+d/50*Math.PI,-Math.PI/2); c.stroke(); c.shadowBlur=0; }
+    c.font=`bold ${R*0.6}px ${font}`; c.textAlign='center'; c.textBaseline='middle'; c.fillStyle=on?rgba(col,1):rgba(p.text,0.3); c.fillText(on?Math.round(d):'--',cx,cy+1);
+    lbl('◀ 低い',cx-R-16,cy,'right',small+2,0.7); lbl('高い ▶',cx+R+16,cy,'left',small+2,0.7);
+  }
+}
+
 /* ===================== DOM表示更新 ===================== */
 const el = { noteName:$('noteName'), noteAcc:$('noteAcc'), noteOct:$('noteOct'), cents:$('centsText'), freq:$('freqText'), sub:$('subText'), comboMain:$('comboMain'), comboSub:$('comboSub'), timbre:$('timbreLabel'), mode:$('modeLabel') };
 const txtCache=new Map();
@@ -5499,7 +5555,7 @@ function updateDOM(){
     setText(el.sub,parts.join(' ・ '));
   } else {
     setText(el.noteName,'—'); setText(el.noteAcc,''); setText(el.noteOct,''); setText(el.cents,'±0.0¢'); setText(el.freq,'--- Hz');
-    setText(el.sub, (audio.micOn||audio.testOn)?'音を鳴らしてください 🎵':'🎤マイク または 🔊テスト音 を押してね');
+    setText(el.sub, (audio.micOn||audio.testOn)?'音を鳴らしてください 🎵':(settings.admin?'🎤マイク または 🔊テスト音 を押してね':'🎤「マイク開始」を押してね'));
   }
   const col=rgba(devColor(p,S.devDisp,S.active),1);
   if(col!==lastColor){ lastColor=col; el.noteName.style.color=col; el.noteAcc.style.color=col; el.cents.style.color=col; }
@@ -5554,6 +5610,7 @@ const SEGS = {
   scopeGain:[1,2,5,10,20].map(v=>({v,l:'×'+v})),
   chord:[{v:'off',l:'オフ'},{v:'maj',l:'メジャー'},{v:'min',l:'マイナー'},{v:'dom7',l:'セブンス'}],
   quality:[{v:'auto',l:'自動'},{v:'2',l:'高画質'},{v:'1',l:'標準'},{v:'0',l:'軽量'}],
+  meterStyle:[{v:'bar',l:'バー'},{v:'needle',l:'アナログ針'},{v:'led',l:'LED'},{v:'strobe',l:'ストロボ'},{v:'digital',l:'デジタル数字'},{v:'dial',l:'丸ダイヤル'}],
   shake:[{v:'auto',l:'自動'},{v:'on',l:'ふつう'},{v:'weak',l:'弱め'},{v:'off',l:'なし'}],
 };
 function buildSettings(){
@@ -5601,7 +5658,7 @@ function refreshLocks(){ const n=unlockedCount(), N=THEME_KEYS.length;
   document.querySelectorAll('#pickerGrid .theme-card').forEach(b=>{ const i=THEME_KEYS.indexOf(b.dataset.key), lock=i>=n; b.classList.toggle('locked',lock); b.title=lock?'🔒 '+unlockHint().text:''; });
   $('themeCount').textContent=`（${n} / ${N} 種類 解放${n<N?'':' ・ 全解放！'}）`;
   const h=$('unlockHint'); if(h){ if(n<N){ const u=unlockHint(); h.style.display=''; h.innerHTML=`🔒 ${u.text}<br><span class="muted">${u.grp.map(k=>`${THEMES[k].icon} Lv.${tlvOf(PROG.tlv[k]||0)}${tlvOf(PROG.tlv[k]||0)>=UNLOCK_LV?'✅':''}`).join('　')}</span><br><span class="muted text-[11px]">※テーマLvはマイクで練習したときに上がります</span>`; } else h.style.display='none'; }
-  const ub=$('btnUnlock'); if(ub) ub.textContent=PROG.unlockAll?'🔒 ロックを元に戻す':'🔑'; }
+}
 function togglePicker(on){ $('picker').style.display=on?'flex':'none'; if(on){ toggleDrawer(false); refreshLocks(); document.querySelectorAll('[data-lv]').forEach(e=>{ const l=tlvOf(PROG.tlv[e.dataset.lv]||0); e.textContent=l>1?'Lv.'+l:''; }); } }
 $('btnTheme').onclick=()=>togglePicker(true);
 $('btnOpenPicker').onclick=()=>togglePicker(true);
@@ -5615,7 +5672,7 @@ $('startTest').onclick=()=>{ if(!audio.testOn) startTest(); };
 window.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
   const k=e.key.toLowerCase();
-  if(k==='m') toggleMic(); else if(k==='t'){ hideStart(); toggleTest(); } else if(k==='s') toggleDrawer(); else if(k==='escape'){ toggleDrawer(false); togglePicker(false); openRecords(false); } else if(k==='r') openRecords($('records').style.display==='none'); else if(k==='g') togglePicker($('picker').style.display==='none');
+  if(k==='m') toggleMic(); else if(k==='t' && settings.admin){ hideStart(); toggleTest(); } else if(k==='s') toggleDrawer(); else if(k==='escape'){ toggleDrawer(false); togglePicker(false); openRecords(false); } else if(k==='r') openRecords($('records').style.display==='none'); else if(k==='g') togglePicker($('picker').style.display==='none');
   else if(/^[1-9]$/.test(k) && THEME_KEYS[+k-1]){ if(setTheme(THEME_KEYS[+k-1])) toast(theme().icon+' '+theme().label,1400); }
   else if((k==='arrowup'||k==='arrowdown') && settings.theme==='scope'){ e.preventDefault(); const G2=[1,2,5,10,20], i=clamp(G2.indexOf(settings.scopeGain)+(k==='arrowup'?1:-1),0,4); settings.scopeGain=G2[i]; saveSettings(); refreshSettings(); toast('縦の倍率 ×'+settings.scopeGain,1000); }
   else if(k==='arrowright') cycleTheme(1); else if(k==='arrowleft') cycleTheme(-1);
@@ -5632,12 +5689,17 @@ RW.unlocked=unlockedCount(); refreshLocks();
   st.addEventListener('touchend',e=>{ if(!on) return; on=false; const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
     if(Math.abs(dx)>50 && Math.abs(dy)<Math.abs(dx)*0.7 && performance.now()-t0<800) cycleTheme(dx<0?1:-1); },{passive:true});
   st.style.touchAction='pan-y'; })();
+function setLockAll(on){ PROG.unlockAll=on; saveProg(); if(!isUnlocked(settings.theme)) setTheme(THEME_KEYS[0],true); RW.unlocked=unlockedCount(); refreshLocks(); }
+function applyAdmin(){ document.body.classList.toggle('admin',!!settings.admin); $('adminSection').style.display=settings.admin?'':'none'; $('adminUnlock').checked=!!PROG.unlockAll; if(!settings.admin && audio.testOn) stopTest(); }
 $('btnUnlock').onclick=()=>{
-  if(PROG.unlockAll){ if(confirm('全テーマ解放をやめて、ロックを元に戻しますか？')){ PROG.unlockAll=false; saveProg(); if(!isUnlocked(settings.theme)) setTheme(THEME_KEYS[0],true); RW.unlocked=unlockedCount(); refreshLocks(); toast('🔒 ロックを元に戻しました'); } return; }
-  const p=prompt('パスワードを入力してください（全テーマを解放）'); if(p==null) return;
-  if(p.trim()===UNLOCK_PASS){ PROG.unlockAll=true; saveProg(); RW.unlocked=unlockedCount(); refreshLocks(); toast('🔓 全テーマを解放しました！'); confetti(150); }
+  const p=prompt('パスワードを入力してください'); if(p==null) return; const v=p.trim();
+  if(v===ADMIN_PASS){ settings.admin=true; saveSettings(); applyAdmin(); toast('🛠 管理者モードになりました（テスト音などが使えます）',3200); }
+  else if(v===UNLOCK_PASS){ setLockAll(true); applyAdmin(); toast('🔓 全テーマを解放しました！'); confetti(150); }
   else toast('パスワードがちがいます');
 };
+$('btnAdminOff').onclick=()=>{ settings.admin=false; saveSettings(); applyAdmin(); toast('管理者モードを終了しました'); };
+$('adminUnlock').onchange=e=>{ setLockAll(e.target.checked); toast(e.target.checked?'🔓 全テーマを解放しました':'🔒 ロックを元に戻しました'); };
+applyAdmin();
 updateBadge();
 resize();
 applyTheme();
