@@ -208,6 +208,12 @@
   </div>
 
   <div>
+    <div class="label">オシロスコープの縦の倍率</div>
+    <div class="seg" data-seg="scopeGain"></div>
+    <div class="text-xs muted mt-1">×1 で画面の上下いっぱい＝最大音量。マイクの音が小さいときは倍率を上げてください（オシロスコープ表示中は ↑↓ キーでも変更できます）。</div>
+  </div>
+
+  <div>
     <div class="label">画質（処理落ち対策）</div>
     <div class="seg" data-seg="quality"></div>
     <div id="perfLabel" class="text-xs muted mt-1"></div>
@@ -283,7 +289,7 @@ const TRANSPOSE = { C:0, Bb:2, Eb:9, F:7 };                     // 実音→記�
 const TRANSP_HINT = { C:'実音（ピアノ・弦楽器・フルート等）', Bb:'B♭管：クラリネット・トランペット・テナーサックス等', Eb:'E♭管：アルトサックス・バリトンサックス等', F:'F管：ホルン・イングリッシュホルン等' };
 
 /* ===================== 設定の保存/読み込み ===================== */
-const DEFAULTS = { theme:'neon', ref:440, transp:'C', temper:'equal', root:0, gate:0.01, fx:1, detune:0, testNote:0, vib:false, vol:0.5, quality:'auto' };
+const DEFAULTS = { theme:'neon', ref:440, transp:'C', temper:'equal', root:0, gate:0.01, fx:1, detune:0, testNote:0, vib:false, vol:0.5, quality:'auto', scopeGain:2 };
 const settings = Object.assign({}, DEFAULTS);
 try { Object.assign(settings, JSON.parse(localStorage.getItem('visualTuner.settings')||'{}')); } catch(e) {}
 /* ===================== 処理落ち対策（自動画質調整） ===================== */
@@ -1185,7 +1191,7 @@ ocean: {
 
 /* ---------- 8. オシロスコープ ---------- */
 scope: {
-  label:'オシロスコープ', icon:'📟', desc:'波形が止まれば合っている',
+  label:'オシロスコープ', icon:'📟', desc:'本物の波形。止まれば合っている',
   palette:{ bg:'#010805', flat:'#36c8ff', sharp:'#ff5ec4', good:'#39ff6a', idle:'#1f5f33', text:'#c8ffd6', reactive:['#0f5a2a','#39ff6a','#0b3a1c'], font:'VT323, monospace' },
   init(){ this.drift=0; this.hist=[]; this.flick=0; },
   rect(){ const w=Math.min(W*0.92,G.R*3.4), h=Math.min(G.R*1.45,w*0.62); return { x:G.cx-w/2, y:G.cy-h/2-G.R*0.15, w, h }; },
@@ -1204,23 +1210,38 @@ scope: {
     for(let i=1;i<10;i++){ const x=r.x+r.w*i/10; ctx.moveTo(x,r.y); ctx.lineTo(x,r.y+r.h); }
     for(let j=1;j<8;j++){ const y=r.y+r.h*j/8; ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); }
     ctx.stroke(); ctx.strokeStyle=rgba(p.good,0.28); ctx.beginPath(); ctx.moveTo(r.x,mid); ctx.lineTo(r.x+r.w,mid); ctx.moveTo(G.cx,r.y); ctx.lineTo(G.cx,r.y+r.h); ctx.stroke();
-    // 波形：基音の位相で切り出し、目標周波数とのズレの速さで横に流す（合うと静止）
-    const periods=clamp(Math.round(r.w/170),2,4), pw=r.w/periods;
-    let pts;
-    if(S.active && audio.analyser){
-      const buf=audio.timeBuf, sr=audio.ctx.sampleRate, f=S.freq, P=sr/f, w=2*Math.PI/P;
-      const M=Math.floor(Math.floor(buf.length/P)*P);
-      let c=0,s=0; for(let n=0;n<M;n++){ c+=buf[n]*Math.cos(w*n); s+=buf[n]*Math.sin(w*n); }
-      const i0=mod(-Math.atan2(-s,c)/w,P);
-      let pk=1e-4; for(let n=0;n<Math.ceil(P);n++){ const v=Math.abs(buf[Math.min(buf.length-1,Math.floor(i0+n))]); if(v>pk) pk=v; }
-      const df=f-f/Math.pow(2,S.devDisp/1200);
-      this.drift=mod(this.drift+clamp(df,-4,4)*dt,1);
-      const gain=r.h*0.36/pk*(0.7+0.3*S.level);
-      pts=[]; for(let x=0;x<=r.w;x+=3){ const fi=i0+mod(x/pw-this.drift,1)*P, i=Math.floor(fi); pts.push(mid-lerp(buf[i]||0,buf[i+1]||0,fi-i)*gain); }
-      // 目標周波数の基準波（点線）
-      ctx.strokeStyle=rgba(p.text,0.2); ctx.setLineDash([3,5]); ctx.beginPath();
-      for(let x=0;x<=r.w;x+=4){ const y=mid-Math.cos(x/pw*Math.PI*2)*r.h*0.36; x?ctx.lineTo(r.x+x,y):ctx.moveTo(r.x,y); } ctx.stroke(); ctx.setLineDash([]);
-    } else { pts=[]; for(let x=0;x<=r.w;x+=3) pts.push(mid+rand(-1.5,1.5)); }
+    // 実際の波形をそのまま表示：縦＝本当の振幅（倍率つき）、横＝本当の時間（ms/div）
+    //   表示の開始位置だけを「目標の音の周期」に合わせて選ぶので、
+    //   音が合うと波形が止まり、ズレているとうなりの速さで横に流れる
+    let pts=[], info=null;
+    const running=audio.analyser&&(audio.micOn||audio.testOn), gain=settings.scopeGain, half=r.h/2;
+    if(running){
+      const buf=audio.timeBuf, N=buf.length, sr=audio.ctx.sampleRate;
+      let start=0, P=0, refAmp=0;
+      if(S.active){
+        const f=S.freq; P=sr/f; const w=2*Math.PI/P, M=Math.floor(Math.floor(N/P)*P);
+        let c=0,sn=0; for(let n=0;n<M;n++){ c+=buf[n]*Math.cos(w*n); sn+=buf[n]*Math.sin(w*n); }
+        refAmp=2*Math.hypot(c,sn)/M;                                   // 基音の本当の振幅
+        const i0=mod(-Math.atan2(-sn,c)/w,P);
+        const df=f-f/Math.pow(2,S.devDisp/1200);                        // 目標とのうなり(Hz)
+        this.drift=mod(this.drift+clamp(df,-4,4)*dt,1);
+        start=i0+(1-this.drift)*P;
+      }
+      // タイムベース：約2周期以上が見える ms/div を 1-2-5 で自動選択
+      const room=N-1-Math.ceil(start), STEPS=[0.1,0.2,0.5,1,2,5];
+      let msdiv=S.active?STEPS.find(v=>v*10>=2*1000/S.freq)||5:2;
+      while(msdiv>STEPS[0] && msdiv*10*sr/1000>room) msdiv=STEPS[STEPS.indexOf(msdiv)-1];
+      const win=msdiv*10*sr/1000;
+      let pk=0;
+      for(let x=0;x<=r.w;x+=3){ const fi=start+x/r.w*win, i=Math.floor(fi), v=lerp(buf[i]||0,buf[i+1]||0,fi-i); if(Math.abs(v)>pk) pk=Math.abs(v); pts.push(mid-v*gain*half); }
+      info={ msdiv, pk };
+      // 目標の音の基準波（点線）：同じ時間軸・同じ振幅で描く
+      if(S.active){ const fT=S.freq/Math.pow(2,S.dev/1200), cyc=win/sr*fT;
+        ctx.strokeStyle=rgba(p.text,0.22); ctx.setLineDash([3,5]); ctx.beginPath();
+        for(let x=0;x<=r.w;x+=4){ const y=mid-Math.cos(x/r.w*cyc*Math.PI*2)*refAmp*gain*half; x?ctx.lineTo(r.x+x,y):ctx.moveTo(r.x,y); }
+        ctx.stroke(); ctx.setLineDash([]); }
+    } else { for(let x=0;x<=r.w;x+=3) pts.push(mid+rand(-1,1)); }
+    this.info=info;
     this.hist.unshift(pts); if(this.hist.length>5) this.hist.pop();
     for(let h=this.hist.length-1;h>=0;h--){
       const ps=this.hist[h]; ctx.strokeStyle=rgba(col,h===0?1:0.25*(1-h/5)); ctx.lineWidth=h===0?2.5:2;
@@ -1234,6 +1255,8 @@ scope: {
     ctx.textBaseline='bottom'; ctx.textAlign='left';
     ctx.fillText(!S.active?'NO SIGNAL':S.locked?'TRIG: LOCKED':S.dev<0?'◀ DRIFT (LOW)':'DRIFT (HIGH) ▶',r.x+10,r.y+r.h-6);
     ctx.textAlign='right'; ctx.fillText(`HOLD ${S.hold.toFixed(1)}s`,r.x+r.w-10,r.y+r.h-6);
+    if(this.info){ const db=this.info.pk>0?20*Math.log10(this.info.pk):-99; ctx.textAlign='center'; ctx.fillStyle=rgba(p.good,0.7);
+      ctx.fillText(`×${gain}  ${this.info.msdiv} ms/div  振幅 ${this.info.pk.toFixed(3)} (${db.toFixed(1)} dBFS)`,G.cx,r.y+r.h-6-fs*1.1); }
     if(S.locked && Math.floor(S.t*3)%2===0){ ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillStyle=p.good; ctx.fillText('■ LOCKED ■',G.cx,r.y+6); }
     // 走査線とちらつき
     ctx.fillStyle='rgba(0,0,0,0.18)'; for(let y=r.y;y<r.y+r.h;y+=3) ctx.fillRect(r.x,y,r.w,1);
@@ -2141,6 +2164,7 @@ const SEGS = {
   ref:[{v:440,l:'440 Hz'},{v:442,l:'442 Hz'},{v:415,l:'415 Hz（古楽）'}],
   transp:[{v:'C',l:'C（実音）'},{v:'Bb',l:'B♭'},{v:'Eb',l:'E♭'},{v:'F',l:'F'}],
   temper:[{v:'equal',l:'平均律'},{v:'just',l:'純正律'}],
+  scopeGain:[1,2,5,10,20].map(v=>({v,l:'×'+v})),
   quality:[{v:'auto',l:'自動'},{v:'2',l:'高画質'},{v:'1',l:'標準'},{v:'0',l:'軽量'}],
 };
 function buildSettings(){
@@ -2193,6 +2217,7 @@ window.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(k==='m') toggleMic(); else if(k==='t'){ hideStart(); toggleTest(); } else if(k==='s') toggleDrawer(); else if(k==='escape'){ toggleDrawer(false); togglePicker(false); } else if(k==='g') togglePicker($('picker').style.display==='none');
   else if(/^[1-9]$/.test(k) && THEME_KEYS[+k-1]) setTheme(THEME_KEYS[+k-1]);
+  else if((k==='arrowup'||k==='arrowdown') && settings.theme==='scope'){ e.preventDefault(); const G2=[1,2,5,10,20], i=clamp(G2.indexOf(settings.scopeGain)+(k==='arrowup'?1:-1),0,4); settings.scopeGain=G2[i]; saveSettings(); refreshSettings(); toast('縦の倍率 ×'+settings.scopeGain,1000); }
   else if(k==='arrowright') cycleTheme(1); else if(k==='arrowleft') cycleTheme(-1);
 });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden && audio.ctx) audio.ctx.resume(); });
