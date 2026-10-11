@@ -65,6 +65,8 @@
   .seg-btn{ flex:1 1 auto; padding:.45rem .5rem; border:1px solid var(--border); border-radius:calc(var(--radius) * .5); background:var(--btn); color:var(--text); font-size:.8rem; cursor:pointer; }
   .seg-btn.active{ background:var(--accent); color:#0a0a14; font-weight:700; box-shadow:0 0 12px var(--accent); }
   .theme-card{ text-align:left; padding:.6rem .7rem; border:1px solid var(--border); border-radius:calc(var(--radius) * .6); background:var(--btn); cursor:pointer; color:var(--text); }
+  .theme-card.locked{ opacity:.38; filter:grayscale(1); position:relative; }
+  .theme-card.locked::after{ content:'🔒'; position:absolute; top:.4rem; right:.5rem; font-size:1.1rem; }
   .theme-card.active{ outline:2px solid var(--accent); box-shadow:0 0 16px var(--accent); }
   .label{ font-size:.72rem; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; margin-bottom:.4rem; font-weight:700; }
   input[type=range]{ width:100%; accent-color:var(--accent); }
@@ -261,9 +263,10 @@
   </div>
 
   <div class="text-xs muted leading-relaxed">
-    ショートカット：<b>M</b> マイク / <b>T</b> テスト音 / <b>S</b> 設定 / <b>1-8</b> / <b>← →</b> テーマ<br>
+    ショートカット：<b>M</b> マイク / <b>T</b> テスト音 / <b>S</b> 設定 / <b>1-9</b> / <b>← →</b> テーマ（スマホは演出エリアを左右にスワイプ）<br>
     ±3セント以内に入ると「PERFECT」。合い続けるほど演出が激しくなります。
   </div>
+  <div class="text-right"><button id="btnUnlock" class="btn" style="font-size:.65rem;padding:.25rem .5rem;opacity:.6">🔑</button></div>
 </aside>
 
 <!-- スタート画面 -->
@@ -286,6 +289,7 @@
       <div class="font-display text-lg">THEMES <span id="themeCount" class="text-xs muted"></span></div>
       <div class="flex gap-2"><button id="btnRandom" class="btn">🎲 おまかせ</button><button id="btnPickerClose" class="btn">✕</button></div>
     </div>
+    <div id="unlockHint" class="text-xs mb-2 panel" style="padding:.5rem .7rem;line-height:1.6"></div>
     <div id="pickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem"></div>
   </div>
 </div>
@@ -691,6 +695,15 @@ const RW={ tier:0, pbDone:false, startBest:0, saveT:0, banners:[], bannerT:0, to
 /* テーマレベル：累計（精度ボーナス込み）の秒数で Lv.1〜10 */
 const TLV_XP=[0,8,20,36,56,80,110,150,200,260];
 function tlvOf(xp){ let l=1; for(let i=0;i<TLV_XP.length;i++) if(xp>=TLV_XP[i]) l=i+1; return l; }
+// ===== テーマのアンロック：5種類ずつ。前の5種類をすべて「テーマLv.3」にすると次の5種類が解放 =====
+const UNLOCK_GROUP=5, UNLOCK_LV=3;
+const UNLOCK_PASS='visualtuner';   // 全テーマ解放パスワード（設定画面の小さな🔑ボタン）
+function unlockedCount(){ const N=THEME_KEYS.length; if(PROG.unlockAll) return N; let g=1;
+  while(g*UNLOCK_GROUP<N && THEME_KEYS.slice((g-1)*UNLOCK_GROUP,g*UNLOCK_GROUP).every(k=>tlvOf(PROG.tlv[k]||0)>=UNLOCK_LV)) g++;
+  return Math.min(N,g*UNLOCK_GROUP); }
+function isUnlocked(k){ return THEME_KEYS.indexOf(k)<unlockedCount(); }
+function unlockHint(){ const n=unlockedCount(), grp=THEME_KEYS.slice(n-UNLOCK_GROUP,n), left=grp.filter(k=>tlvOf(PROG.tlv[k]||0)<UNLOCK_LV);
+  return { grp, left, text:`${n-UNLOCK_GROUP+1}〜${n}番のテーマをすべて Lv.${UNLOCK_LV} にすると次の${UNLOCK_GROUP}種類が解放（あと${left.length}種類）` }; }
 function syncThemeLevel(){ S.tlv=tlvOf(PROG.tlv[settings.theme]||0); S.tlf=(S.tlv-1)/9; }
 function rewardsOnLock(){
   RW.tier=0; RW.pbDone=false; RW.startBest=PROG.best;
@@ -709,7 +722,8 @@ function rewardsTick(dt){
   const k=settings.theme, x0=PROG.tlv[k]||0; PROG.tlv[k]=x0+dt*S.acc;
   const tl0=tlvOf(x0), tl1=tlvOf(PROG.tlv[k]);
   if(tl1>tl0){ const th=theme(), perk=(th.lv||[]).find(q=>q[0]===tl1); syncThemeLevel();
-    queueBanner(`${th.icon} ${th.label} Lv.${tl1}`,'level',perk?`新しい演出「${perk[1]}」解放！`:tl1===10?'MAX！ 最高レベル到達':'演出がパワーアップ！'); confetti(50); }
+    queueBanner(`${th.icon} ${th.label} Lv.${tl1}`,'level',perk?`新しい演出「${perk[1]}」解放！`:tl1===10?'MAX！ 最高レベル到達':'演出がパワーアップ！'); confetti(50);
+    if(tl1===UNLOCK_LV){ const n=unlockedCount(); if(n>(RW.unlocked||UNLOCK_GROUP)){ RW.unlocked=n; queueBanner(`🔓 新しいテーマが${UNLOCK_GROUP}種類アンロック！`,'level',THEME_KEYS.slice(n-UNLOCK_GROUP,n).map(k=>THEMES[k].icon).join(' ')); confetti(120); saveProg(); } } }
   const lv0=levelOf(PROG.total), t=dayStr(new Date());
   PROG.total+=dt; PROG.days[t]=(PROG.days[t]||0)+dt;
   const lv=levelOf(PROG.total);
@@ -4325,7 +4339,7 @@ function applyTheme(){
   FX.particles.length=0; FX.waves.length=0; lastColor='';
   document.querySelectorAll('.theme-card').forEach(b=>b.classList.toggle('active',b.dataset.key===settings.theme));
 }
-function setTheme(k){ if(!THEMES[k]) return; settings.theme=k; saveSettings(); applyTheme(); }
+function setTheme(k,force){ if(!THEMES[k]) return false; if(!force && !isUnlocked(k)){ toast('🔒 まだロック中： '+unlockHint().text,3200); return false; } settings.theme=k; saveSettings(); applyTheme(); return true; }
 const SEGS = {
   ref:[{v:440,l:'440 Hz'},{v:442,l:'442 Hz'},{v:415,l:'415 Hz（古楽）'}],
   transp:[{v:'C',l:'C（実音）'},{v:'Bb',l:'B♭'},{v:'Eb',l:'E♭'},{v:'F',l:'F'}],
@@ -4340,7 +4354,7 @@ function buildSettings(){
   $('themeCount').textContent=`（全${THEME_KEYS.length}種類）`;
   THEME_KEYS.forEach((k,i)=>{ const t=THEMES[k]; const b=document.createElement('button'); b.className='theme-card'; b.dataset.key=k;
     b.innerHTML=`<div class="text-xl">${t.icon}</div><div class="text-sm font-bold">${i+1}. ${t.label} <span class="accent" data-lv="${k}"></span></div><div class="text-[11px] muted">${t.desc}</div>`;
-    b.onclick=()=>{ setTheme(k); togglePicker(false); }; tl.appendChild(b); });
+    b.onclick=()=>{ if(setTheme(k)) togglePicker(false); }; tl.appendChild(b); });
   document.querySelectorAll('[data-seg]').forEach(box=>{
     const key=box.dataset.seg;
     SEGS[key].forEach(o=>{ const b=document.createElement('button'); b.className='seg-btn'; b.textContent=o.l; b.dataset.v=String(o.v);
@@ -4371,17 +4385,22 @@ function toggleDrawer(force){ $('drawer').classList.toggle('open',force); }
 
 $('btnMic').onclick=toggleMic;
 $('btnTest').onclick=toggleTest;
-function cycleTheme(d){ const i=THEME_KEYS.indexOf(settings.theme); setTheme(THEME_KEYS[mod(i+d,THEME_KEYS.length)]); toast(theme().icon+' '+theme().label,1400); }
+function cycleTheme(d){ const n=unlockedCount(), i=THEME_KEYS.indexOf(settings.theme); setTheme(THEME_KEYS[mod((i<n?i:0)+d,n)]); toast(`${theme().icon} ${theme().label}  (${THEME_KEYS.indexOf(settings.theme)+1}/${n})`,1400); }
 $('btnRecords').onclick=()=>openRecords(true);
 $('btnRecordsClose').onclick=()=>openRecords(false);
 $('records').onclick=e=>{ if(e.target.id==='records') openRecords(false); };
-$('btnResetProg').onclick=()=>{ if(confirm('レベル・実績・記録をすべてリセットしますか？')){ Object.assign(PROG,{ total:0, best:0, days:{}, streak:0, lastDay:'', ach:{}, notes:[], themes:[], tlv:{}, mon:{}, bal:0, stars:[], starCur:0, climb:0, climbS:0, lava:0, bubbleBest:0, shu:0, race:0, neko:0, veg:0, sun:0, train:0, tree:0, gear:3, pixLv:1, pixExp:0, flower:0, hanabi:0, kaleido:0, ocean:0, snow:0, arch:0, fire:0, const15:[], constCur:0 }); syncThemeLevel(); saveProg(); updateBadge(); openRecords(true); } };
-function togglePicker(on){ $('picker').style.display=on?'flex':'none'; if(on){ toggleDrawer(false); document.querySelectorAll('[data-lv]').forEach(e=>{ const l=tlvOf(PROG.tlv[e.dataset.lv]||0); e.textContent=l>1?'Lv.'+l:''; }); } }
+$('btnResetProg').onclick=()=>{ if(confirm('レベル・実績・記録をすべてリセットしますか？')){ Object.assign(PROG,{ total:0, best:0, days:{}, streak:0, lastDay:'', ach:{}, notes:[], themes:[], tlv:{}, mon:{}, bal:0, stars:[], starCur:0, climb:0, climbS:0, lava:0, bubbleBest:0, shu:0, race:0, neko:0, veg:0, sun:0, train:0, tree:0, gear:3, pixLv:1, pixExp:0, flower:0, hanabi:0, kaleido:0, ocean:0, snow:0, arch:0, fire:0, const15:[], constCur:0 }); if(!isUnlocked(settings.theme)) setTheme(THEME_KEYS[0],true); RW.unlocked=unlockedCount(); refreshLocks(); syncThemeLevel(); saveProg(); updateBadge(); openRecords(true); } };
+function refreshLocks(){ const n=unlockedCount(), N=THEME_KEYS.length;
+  document.querySelectorAll('#pickerGrid .theme-card').forEach(b=>{ const i=THEME_KEYS.indexOf(b.dataset.key), lock=i>=n; b.classList.toggle('locked',lock); b.title=lock?'🔒 '+unlockHint().text:''; });
+  $('themeCount').textContent=`（${n} / ${N} 種類 解放${n<N?'':' ・ 全解放！'}）`;
+  const h=$('unlockHint'); if(h){ if(n<N){ const u=unlockHint(); h.style.display=''; h.innerHTML=`🔒 ${u.text}<br><span class="muted">${u.grp.map(k=>`${THEMES[k].icon} Lv.${tlvOf(PROG.tlv[k]||0)}${tlvOf(PROG.tlv[k]||0)>=UNLOCK_LV?'✅':''}`).join('　')}</span><br><span class="muted text-[11px]">※テーマLvはマイクで練習したときに上がります</span>`; } else h.style.display='none'; }
+  const ub=$('btnUnlock'); if(ub) ub.textContent=PROG.unlockAll?'🔒 ロックを元に戻す':'🔑'; }
+function togglePicker(on){ $('picker').style.display=on?'flex':'none'; if(on){ toggleDrawer(false); refreshLocks(); document.querySelectorAll('[data-lv]').forEach(e=>{ const l=tlvOf(PROG.tlv[e.dataset.lv]||0); e.textContent=l>1?'Lv.'+l:''; }); } }
 $('btnTheme').onclick=()=>togglePicker(true);
 $('btnOpenPicker').onclick=()=>togglePicker(true);
 $('btnPickerClose').onclick=()=>togglePicker(false);
 $('picker').onclick=e=>{ if(e.target.id==='picker') togglePicker(false); };
-$('btnRandom').onclick=()=>{ let k; do{ k=pick(THEME_KEYS); }while(k===settings.theme && THEME_KEYS.length>1); setTheme(k); togglePicker(false); toast(theme().icon+' '+theme().label,1400); };
+$('btnRandom').onclick=()=>{ const U=THEME_KEYS.slice(0,unlockedCount()); let k; do{ k=pick(U); }while(k===settings.theme && U.length>1); setTheme(k); togglePicker(false); toast(theme().icon+' '+theme().label,1400); };
 $('btnSettings').onclick=()=>toggleDrawer();
 $('btnClose').onclick=()=>toggleDrawer(false);
 $('startMic').onclick=toggleMic;
@@ -4390,7 +4409,7 @@ window.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
   const k=e.key.toLowerCase();
   if(k==='m') toggleMic(); else if(k==='t'){ hideStart(); toggleTest(); } else if(k==='s') toggleDrawer(); else if(k==='escape'){ toggleDrawer(false); togglePicker(false); openRecords(false); } else if(k==='r') openRecords($('records').style.display==='none'); else if(k==='g') togglePicker($('picker').style.display==='none');
-  else if(/^[1-9]$/.test(k) && THEME_KEYS[+k-1]) setTheme(THEME_KEYS[+k-1]);
+  else if(/^[1-9]$/.test(k) && THEME_KEYS[+k-1]){ if(setTheme(THEME_KEYS[+k-1])) toast(theme().icon+' '+theme().label,1400); }
   else if((k==='arrowup'||k==='arrowdown') && settings.theme==='scope'){ e.preventDefault(); const G2=[1,2,5,10,20], i=clamp(G2.indexOf(settings.scopeGain)+(k==='arrowup'?1:-1),0,4); settings.scopeGain=G2[i]; saveSettings(); refreshSettings(); toast('縦の倍率 ×'+settings.scopeGain,1000); }
   else if(k==='arrowright') cycleTheme(1); else if(k==='arrowleft') cycleTheme(-1);
 });
@@ -4398,6 +4417,20 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden && audio.
 
 /* ===================== 起動 ===================== */
 buildSettings();
+if(!isUnlocked(settings.theme)) settings.theme=THEME_KEYS[0];
+RW.unlocked=unlockedCount(); refreshLocks();
+// 演出エリアを左右にスワイプしてテーマ切替
+(()=>{ const st=$('stage'); let sx=0, sy=0, t0=0, on=false;
+  st.addEventListener('touchstart',e=>{ if(e.touches.length!==1) return; on=true; sx=e.touches[0].clientX; sy=e.touches[0].clientY; t0=performance.now(); },{passive:true});
+  st.addEventListener('touchend',e=>{ if(!on) return; on=false; const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Math.abs(dx)>50 && Math.abs(dy)<Math.abs(dx)*0.7 && performance.now()-t0<800) cycleTheme(dx<0?1:-1); },{passive:true});
+  st.style.touchAction='pan-y'; })();
+$('btnUnlock').onclick=()=>{
+  if(PROG.unlockAll){ if(confirm('全テーマ解放をやめて、ロックを元に戻しますか？')){ PROG.unlockAll=false; saveProg(); if(!isUnlocked(settings.theme)) setTheme(THEME_KEYS[0],true); RW.unlocked=unlockedCount(); refreshLocks(); toast('🔒 ロックを元に戻しました'); } return; }
+  const p=prompt('パスワードを入力してください（全テーマを解放）'); if(p==null) return;
+  if(p.trim()===UNLOCK_PASS){ PROG.unlockAll=true; saveProg(); RW.unlocked=unlockedCount(); refreshLocks(); toast('🔓 全テーマを解放しました！'); confetti(150); }
+  else toast('パスワードがちがいます');
+};
 updateBadge();
 resize();
 applyTheme();
