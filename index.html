@@ -222,7 +222,7 @@
 
   <div id="adminSection" class="panel" style="padding:.7rem;display:none">
     <div class="label" style="color:var(--accent)">🛠 管理者モード</div>
-    <label class="flex items-center gap-2 text-sm mb-2"><input id="adminUnlock" type="checkbox"> 全テーマを解放する</label>
+    <div class="text-xs muted mb-2">管理者モードの間は、すべてのテーマが解放されます。</div>
     <div class="label">テスト音シンセ</div>
     <div class="flex items-center gap-2 text-sm mb-2">
       <span>音</span><select id="testNoteSel"></select>
@@ -709,7 +709,7 @@ function tlvOf(xp){ let l=1; for(let i=0;i<TLV_XP.length;i++) if(xp>=TLV_XP[i]) 
 const UNLOCK_GROUP=5, UNLOCK_LV=3;
 const UNLOCK_PASS='visualtuner';   // 全テーマ解放パスワード（設定画面の小さな🔑ボタン）
 const ADMIN_PASS='tuneradmin';     // 管理者モードのパスワード（テスト音・全テーマ解放の切り替え）
-function unlockedCount(){ const N=THEME_KEYS.length; if(PROG.unlockAll) return N; let g=1;
+function unlockedCount(){ const N=THEME_KEYS.length; if(PROG.unlockAll || settings.admin) return N; let g=1;
   while(g*UNLOCK_GROUP<N && THEME_KEYS.slice((g-1)*UNLOCK_GROUP,g*UNLOCK_GROUP).every(k=>tlvOf(PROG.tlv[k]||0)>=UNLOCK_LV)) g++;
   return Math.min(N,g*UNLOCK_GROUP); }
 function isUnlocked(k){ return THEME_KEYS.indexOf(k)<unlockedCount(); }
@@ -5690,15 +5690,14 @@ RW.unlocked=unlockedCount(); refreshLocks();
     if(Math.abs(dx)>50 && Math.abs(dy)<Math.abs(dx)*0.7 && performance.now()-t0<800) cycleTheme(dx<0?1:-1); },{passive:true});
   st.style.touchAction='pan-y'; })();
 function setLockAll(on){ PROG.unlockAll=on; saveProg(); if(!isUnlocked(settings.theme)) setTheme(THEME_KEYS[0],true); RW.unlocked=unlockedCount(); refreshLocks(); }
-function applyAdmin(){ document.body.classList.toggle('admin',!!settings.admin); $('adminSection').style.display=settings.admin?'':'none'; $('adminUnlock').checked=!!PROG.unlockAll; if(!settings.admin && audio.testOn) stopTest(); }
+function applyAdmin(){ document.body.classList.toggle('admin',!!settings.admin); $('adminSection').style.display=settings.admin?'':'none'; if(!settings.admin && audio.testOn) stopTest(); if(!isUnlocked(settings.theme)) setTheme(THEME_KEYS[0],true); RW.unlocked=unlockedCount(); refreshLocks(); }
 $('btnUnlock').onclick=()=>{
   const p=prompt('パスワードを入力してください'); if(p==null) return; const v=p.trim();
-  if(v===ADMIN_PASS){ settings.admin=true; saveSettings(); applyAdmin(); toast('🛠 管理者モードになりました（テスト音などが使えます）',3200); }
+  if(v===ADMIN_PASS){ settings.admin=true; saveSettings(); applyAdmin(); toast('🛠 管理者モードになりました（全テーマ解放・テスト音が使えます）',3200); }
   else if(v===UNLOCK_PASS){ setLockAll(true); applyAdmin(); toast('🔓 全テーマを解放しました！'); confetti(150); }
   else toast('パスワードがちがいます');
 };
 $('btnAdminOff').onclick=()=>{ settings.admin=false; saveSettings(); applyAdmin(); toast('管理者モードを終了しました'); };
-$('adminUnlock').onchange=e=>{ setLockAll(e.target.checked); toast(e.target.checked?'🔓 全テーマを解放しました':'🔒 ロックを元に戻しました'); };
 applyAdmin();
 updateBadge();
 resize();
