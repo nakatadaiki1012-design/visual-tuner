@@ -46,7 +46,11 @@
   body[data-theme="scope"] { --bg:#010805; --panel:rgba(4,20,10,.75);    --border:rgba(57,255,106,.35);  --text:#c8ffd6; --muted:#5fae78; --accent:#39ff6a; --accent2:#1f9a45; --good:#39ff6a; --font-display:'VT323','Noto Sans JP',monospace; --font-ui:'Noto Sans JP',sans-serif; --radius:6px; --btn:rgba(57,255,106,.08); }
   body[data-theme="bloom"] { --bg:#0b1026; --panel:rgba(255,240,250,.07); --border:rgba(255,182,217,.30); --text:#fdf6ff; --muted:#b9a9c9; --accent:#ffb6d9; --accent2:#ffe7a3; --good:#ffb6d9; --font-display:'Zen Maru Gothic','Noto Sans JP',sans-serif; --font-ui:'Zen Maru Gothic','Noto Sans JP',sans-serif; --radius:24px; --btn:rgba(255,182,217,.10); }
 
-  html,body{ height:100%; }
+  html,body{ height:100%; overflow:hidden; }
+  /* スマホで文字の行数が変わっても演出エリアの大きさが変わらないように固定 */
+  #subText{ height:1.1rem; line-height:1.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #stage,#app{ overflow:hidden; }
+  #readRow{ height:1.3rem; line-height:1.3rem; overflow:hidden; white-space:nowrap; } #readRow>span{ line-height:1.3rem; display:inline-block; }
   body{ margin:0; background:var(--bg); color:var(--text); font-family:var(--font-ui); -webkit-tap-highlight-color:transparent; overscroll-behavior:none; }
   .font-display{ font-family:var(--font-display); }
   .muted{ color:var(--muted); }
@@ -54,7 +58,7 @@
   .panel{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
   .panel-solid{ background:var(--bg); border-left:1px solid var(--border); }
   .btn{ display:inline-flex; align-items:center; gap:.4rem; padding:.5rem .8rem; border-radius:calc(var(--radius) * .7); border:1px solid var(--border); background:var(--btn); color:var(--text); font-size:.85rem; font-weight:700; cursor:pointer; transition:transform .1s, background .2s, box-shadow .2s; white-space:nowrap; }
-  .btn:hover{ transform:translateY(-1px); }
+  @media (hover:hover){ .btn:hover{ transform:translateY(-1px); } }
   .btn:active{ transform:translateY(1px); }
   .btn.on{ background:var(--accent); color:#0a0a14; box-shadow:0 0 18px var(--accent); }
   .seg{ display:flex; flex-wrap:wrap; gap:.35rem; }
@@ -131,11 +135,11 @@
         <span id="noteOct" class="note-oct"></span>
       </span>
     </div>
-    <div class="flex justify-center gap-5 mt-1 font-display text-sm sm:text-base">
+    <div id="readRow" class="flex justify-center gap-5 mt-1 font-display text-sm sm:text-base">
       <span id="centsText">±0.0¢</span>
       <span id="freqText" class="muted">--- Hz</span>
     </div>
-    <div id="subText" class="text-xs muted mt-1 min-h-[1rem] px-2"></div>
+    <div id="subText" class="text-xs muted mt-1 px-2"></div>
   </section>
 
   <!-- メイン演出エリア（キャンバスはここを中心に描画） -->
@@ -245,6 +249,12 @@
   </div>
 
   <div>
+    <div class="label">画面のゆれ</div>
+    <div class="seg" data-seg="shake"></div>
+    <div class="text-xs muted mt-1">合った瞬間などに画面がゆれる演出の強さ。「自動」はスマホでは控えめになります。</div>
+  </div>
+
+  <div>
     <div class="label">演出の強さ</div>
     <input id="fxAmt" type="range" min="0.2" max="2" step="0.1">
     <div class="text-xs muted">パーティクル量・フラッシュの強さ。重いときは下げてください。</div>
@@ -331,7 +341,7 @@ const TRANSPOSE = { C:0, Bb:2, Eb:9, F:7 };                     // 実音→記�
 const TRANSP_HINT = { C:'実音（ピアノ・弦楽器・フルート等）', Bb:'B♭管：クラリネット・トランペット・テナーサックス等', Eb:'E♭管：アルトサックス・バリトンサックス等', F:'F管：ホルン・イングリッシュホルン等' };
 
 /* ===================== 設定の保存/読み込み ===================== */
-const DEFAULTS = { theme:'neon', ref:440, transp:'C', temper:'equal', root:0, gate:0.01, fx:1, detune:0, testNote:0, vib:false, vol:0.5, quality:'auto', scopeGain:2, chord:'off', drone:false, droneVol:0.4 };
+const DEFAULTS = { theme:'neon', ref:440, transp:'C', temper:'equal', root:0, gate:0.01, fx:1, detune:0, testNote:0, vib:false, vol:0.5, quality:'auto', shake:'auto', scopeGain:2, chord:'off', drone:false, droneVol:0.4 };
 const settings = Object.assign({}, DEFAULTS);
 try { Object.assign(settings, JSON.parse(localStorage.getItem('visualTuner.settings')||'{}')); } catch(e) {}
 /* ===================== 処理落ち対策（自動画質調整） ===================== */
@@ -789,7 +799,8 @@ function spawn(o){
 function burst(x,y,n,f){ n=Math.round(n*S.fx); for(let i=0;i<n;i++) spawn(f(i)); }
 function flash(color,a){ FX.flashColor=color; FX.flashA=Math.max(FX.flashA, a*Math.min(1,settings.fx)); }
 function wave(x,y,color,o={}){ FX.waves.push(Object.assign({ x,y,color,r:o.r0||10,v:o.v||400,age:0,life:o.life||0.9,w:o.w||3 }, o)); }
-function shake(a){ FX.shake=Math.max(FX.shake, a*Math.min(1.5,settings.fx)); }
+function shakeAmt(){ const m=settings.shake; if(m==='off') return 0; if(m==='weak') return 0.3; if(m==='on') return 1; return (Math.min(innerWidth,innerHeight)<700||matchMedia('(pointer:coarse)').matches)?0.25:1; }
+function shake(a){ const k=shakeAmt(); if(k>0) FX.shake=Math.max(FX.shake, a*k*Math.min(1.5,settings.fx)); }
 
 function updateFX(dt){
   const ps=FX.particles;
@@ -938,7 +949,8 @@ function stageGrow(th,key,per,names,msg,unit,dt){
   return i;
 }
 function stageHUD(ctx,font,col,text,f){
-  const x=G.cx-G.R*1.45, y=G.cy-G.R*1.05, w=G.R*0.9;
+  const x=Math.max(G.cx-G.R*1.45,(G.x0||0)+12); let y=G.cy-G.R*1.05; const w=G.R*0.9;
+  if(x<(G.x0||0)+115) y=Math.max(y,(G.y0||0)+(S.harmony?46:30));   // スマホでは「テーマLv」表示の下へ
   ctx.save(); ctx.font=`${Math.max(11,G.R*0.062)}px ${font}`; ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillText(text,x+1,y+1); ctx.fillStyle=col; ctx.fillText(text,x,y);
   const by=y+Math.max(14,G.R*0.085); ctx.fillStyle='rgba(128,128,128,0.35)'; ctx.fillRect(x,by,w,4); ctx.fillStyle=col; ctx.fillRect(x,by,w*clamp(f,0,1),4);
@@ -4321,6 +4333,7 @@ const SEGS = {
   scopeGain:[1,2,5,10,20].map(v=>({v,l:'×'+v})),
   chord:[{v:'off',l:'オフ'},{v:'maj',l:'メジャー'},{v:'min',l:'マイナー'},{v:'dom7',l:'セブンス'}],
   quality:[{v:'auto',l:'自動'},{v:'2',l:'高画質'},{v:'1',l:'標準'},{v:'0',l:'軽量'}],
+  shake:[{v:'auto',l:'自動'},{v:'on',l:'ふつう'},{v:'weak',l:'弱め'},{v:'off',l:'なし'}],
 };
 function buildSettings(){
   const tl=$('pickerGrid');
