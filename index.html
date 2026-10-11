@@ -441,7 +441,7 @@ async function toggleMic(){
     toast('🎤 マイクON！楽器を鳴らしてみよう');
   }catch(e){
     const msg = e.name==='NotAllowedError' ? 'マイクが許可されませんでした。ブラウザのアドレスバー横からマイクを許可してください。'
-              : e.name==='NotFoundError' ? 'マイクが見つかりません。テスト音で演出を試せます。'
+              : e.name==='NotFoundError' ? 'マイクが見つかりません。マイクをつないでからもう一度お試しください。'
               : e.name==='Unsupported' ? 'このブラウザ/開き方ではマイクが使えません（https または localhost で開いてください）。'
               : 'マイクを開始できませんでした：'+e.message;
     toast(msg, 5000);
@@ -812,7 +812,7 @@ function openRecords(on){
     ${(PROG.const15||[]).length?`<div class="label">集めた星座</div><div class="flex gap-1" style="flex-wrap:wrap;margin-bottom:.8rem">${PROG.const15.map(i=>`<span class="text-[11px] panel" style="padding:.1rem .45rem">${(THEMES.constellation.DATA[i]||{}).n}</span>`).join('')}</div>`:''}
     <div class="label">実績バッジ</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem">${ach}</div>
-    <div class="text-xs muted" style="margin-top:.8rem">※ 記録はマイクで練習したときだけ貯まります（テスト音では貯まりません）。段位バナーや FEVER はテスト音でも楽しめます。</div>`;
+    <div class="text-xs muted" style="margin-top:.8rem">※ 記録はマイクで練習したときだけ貯まります。</div>`;
 }
 
 /* ===================== 共通エフェクトエンジン ===================== */
