@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;900&family=Orbitron:wght@800&display=swap" rel="stylesheet">
+<style>
+  html,body{ margin:0; }
+  body{ width:1280px; height:670px; overflow:hidden; position:relative; font-family:'Zen Maru Gothic',sans-serif; color:#fff;
+        background:radial-gradient(circle at 75% 40%, #2a1050 0%, #0a0618 55%, #04030a 100%); }
+  .shot{ position:absolute; border-radius:18px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 0 3px rgba(255,255,255,.12); }
+  .shot img{ display:block; width:100%; }
+  .s1{ width:560px; right:-40px; top:40px; transform:rotate(4deg); }
+  .s2{ width:400px; right:330px; top:330px; transform:rotate(-5deg); }
+  .s3{ width:360px; right:-20px; top:400px; transform:rotate(-2deg); }
+  .phone{ position:absolute; width:190px; left:520px; top:60px; border-radius:30px; overflow:hidden; transform:rotate(-7deg);
+          box-shadow:0 20px 60px rgba(0,0,0,.7), 0 0 0 6px #111, 0 0 0 8px rgba(255,255,255,.2); }
+  .phone img{ display:block; width:100%; }
+  .copy{ position:absolute; left:60px; top:70px; width:520px; z-index:5; text-shadow:0 4px 24px rgba(0,0,0,.8); }
+  .tag{ display:inline-block; font-weight:900; font-size:22px; padding:6px 16px; border-radius:999px; background:linear-gradient(90deg,#00f0ff,#ff2bd6); color:#0a0618; }
+  h1{ font-size:64px; line-height:1.22; margin:22px 0 18px; font-weight:900; }
+  h1 em{ font-style:normal; background:linear-gradient(90deg,#2bff9a,#ffe27a,#ff7ab8); -webkit-background-clip:text; color:transparent; }
+  p{ font-size:24px; line-height:1.6; margin:0; font-weight:500; color:#e8e4ff; }
+  .logo{ position:absolute; left:60px; bottom:44px; font-family:Orbitron,sans-serif; font-size:30px; letter-spacing:.18em; z-index:5; }
+  .logo span{ color:#00f0ff; }
+  .badge{ position:absolute; left:60px; bottom:96px; z-index:5; display:flex; gap:10px; }
+  .badge div{ font-size:18px; font-weight:900; padding:6px 14px; border-radius:10px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); }
+</style></head>
+<body>
+  <div class="shot s1"><img src="images/raw-ocean.png"></div>
+  <div class="shot s3"><img src="images/raw-hanabi.png"></div>
+  <div class="shot s2"><img src="images/raw-neon.png"></div>
+  <div class="phone"><img src="images/raw-phone-sakura.png"></div>
+  <div class="copy">
+    <span class="tag">楽器の練習が、ゲームになる</span>
+    <h1>音程が合うと、<br><em>画面が弾ける。</em></h1>
+    <p>50種類の演出がレベルアップしていく<br>エンタメ系Webチューナーを作りました</p>
+  </div>
+  <div class="badge"><div>🎨 50テーマ</div><div>📱 スマホOK</div><div>🆓 インストール不要</div></div>
+  <div class="logo">VISUAL<span>TUNER</span></div>
+</body></html>
