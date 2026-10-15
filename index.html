@@ -79,6 +79,12 @@
   select option{ background:#111; color:#fff; }
 
   .note-big{ font-family:var(--font-display); font-weight:800; font-size:clamp(56px,13vh,128px); line-height:.9; text-shadow:0 0 28px currentColor; transition:color .12s; }
+  /* 両どなりの音（ひとつ低い音／ひとつ高い音）。ズレている側が光るので、どちらへ動かせばいいかひと目でわかる */
+  .nbr{ width:clamp(70px,17vw,130px); display:flex; align-items:center; gap:.3rem; padding-bottom:.9rem; font-family:var(--font-display); font-weight:800; font-size:clamp(16px,3.4vh,32px); line-height:1; opacity:.22; transition:opacity .1s; white-space:nowrap; }
+  .nbr-l{ justify-content:flex-end; } .nbr-r{ justify-content:flex-start; }
+  .nbr-arrow{ font-size:.7em; }
+  .status-badge{ display:inline-block; min-width:12rem; padding:.12rem .9rem; border-radius:999px; border:2px solid currentColor; font-weight:800; font-size:clamp(13px,2.5vh,20px); line-height:1.5; background:rgba(0,0,0,.28); letter-spacing:.04em; transition:opacity .15s; opacity:0; }
+  body.lightbg .status-badge{ background:rgba(255,255,255,.55); }
   .note-acc{ font-family:var(--font-display); font-weight:800; font-size:clamp(22px,4.5vh,44px); line-height:1; }
   .note-oct{ font-family:var(--font-display); font-size:clamp(16px,3vh,28px); line-height:1; opacity:.75; }
   #comboMain{ font-family:var(--font-display); font-weight:800; font-size:clamp(22px,5vh,46px); color:var(--good); text-shadow:0 0 var(--glow,10px) var(--good), 0 0 calc(var(--glow,10px) * 2) var(--good); letter-spacing:.06em; }
@@ -92,6 +98,8 @@
 
   /* --- 8bit テーマだけ角ばったドット風 UI に --- */
   body[data-theme="pixel"] .panel, body[data-theme="pixel"] .btn, body[data-theme="pixel"] .seg-btn, body[data-theme="pixel"] .theme-card{ border-width:3px; box-shadow:4px 4px 0 #000; backdrop-filter:none; }
+  body[data-theme="pixel"] .nbr{ font-size:clamp(12px,2.6vh,22px); }
+  body[data-theme="pixel"] .status-badge{ border-radius:0; border-width:3px; }
   body[data-theme="pixel"] .note-big{ font-size:clamp(38px,8.5vh,84px); text-shadow:5px 5px 0 #000; }
   body[data-theme="pixel"] .note-acc{ font-size:clamp(16px,3.2vh,30px); text-shadow:3px 3px 0 #000; }
   body[data-theme="pixel"] .note-oct{ font-size:clamp(12px,2.2vh,20px); }
@@ -136,17 +144,22 @@
 
   <!-- 音名・セント表示 -->
   <section class="text-center pt-1 select-none">
-    <div class="flex items-end justify-center gap-1">
-      <span id="noteName" class="note-big">—</span>
-      <span class="flex flex-col items-start gap-1 pb-1">
-        <span id="noteAcc" class="note-acc"></span>
-        <span id="noteOct" class="note-oct"></span>
-      </span>
+    <div class="flex items-end justify-center">
+      <div id="nbLow" class="nbr nbr-l" title="ひとつ低い音"><span class="nbr-arrow">◀</span><span id="nbLowName">—</span></div>
+      <div class="flex items-end gap-1">
+        <span id="noteName" class="note-big">—</span>
+        <span class="flex flex-col items-start gap-1 pb-1">
+          <span id="noteAcc" class="note-acc"></span>
+          <span id="noteOct" class="note-oct"></span>
+        </span>
+      </div>
+      <div id="nbHigh" class="nbr nbr-r" title="ひとつ高い音"><span id="nbHighName">—</span><span class="nbr-arrow">▶</span></div>
     </div>
     <div id="readRow" class="flex justify-center gap-5 mt-1 font-display text-sm sm:text-base">
       <span id="centsText">±0.0¢</span>
       <span id="freqText" class="muted">--- Hz</span>
     </div>
+    <div id="statusWrap" class="mt-1"><span id="statusBadge" class="status-badge">&nbsp;</span></div>
     <div id="subText" class="text-xs muted mt-1 px-2"></div>
   </section>
 
@@ -5625,27 +5638,45 @@ function drawMeterAlt(style,c,w,h,p){
 }
 
 /* ===================== DOM表示更新 ===================== */
-const el = { noteName:$('noteName'), noteAcc:$('noteAcc'), noteOct:$('noteOct'), cents:$('centsText'), freq:$('freqText'), sub:$('subText'), comboMain:$('comboMain'), comboSub:$('comboSub'), timbre:$('timbreLabel'), mode:$('modeLabel') };
+const el = { nbLow:$('nbLow'), nbLowName:$('nbLowName'), nbHigh:$('nbHigh'), nbHighName:$('nbHighName'), badge:$('statusBadge'), noteName:$('noteName'), noteAcc:$('noteAcc'), noteOct:$('noteOct'), cents:$('centsText'), freq:$('freqText'), sub:$('subText'), comboMain:$('comboMain'), comboSub:$('comboSub'), timbre:$('timbreLabel'), mode:$('modeLabel') };
 const txtCache=new Map();
 function setText(e,v){ if(txtCache.get(e)!==v){ txtCache.set(e,v); e.textContent=v; } }
 const bars=[];
 for(let i=0;i<5;i++){ const wrap=document.createElement('div'); wrap.className='flex-1 h-full flex items-end'; const b=document.createElement('div'); b.className='hbar'; b.style.transform='scaleY(0.02)'; wrap.appendChild(b); $('hbars').appendChild(wrap); bars.push(b); }
 let lastColor='';
 function comboPop(){ const e=el.comboMain; e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); }
+// 「高い／低い／惜しい」をことばで（d：目標からのズレ[セント]。マイナス＝低い）
+function statusOf(d){
+  const a=Math.abs(d), L=CONFIG.LOCK_CENTS, low=d<0;
+  if(a<=L) return 'ピッタリ！ ✨';
+  if(a<=10) return low?'惜しい！ もう少し高く ▲':'惜しい！ もう少し低く ▼';
+  if(a<=25) return low?'低い ▲ 上げて':'高い ▼ 下げて';
+  return low?'かなり低い ▲▲':'かなり高い ▼▼';
+}
+function noteLabel(m){ const n=NAMES[mod(m,12)]; return n+(Math.floor(m/12)-1); }
 function updateDOM(){
   const p=theme().palette;
   if(S.active){
     const n=NAMES[S.pc];
     setText(el.noteName,n[0]); setText(el.noteAcc,n.slice(1)); setText(el.noteOct,String(S.octave));
     setText(el.cents,fmtC(S.dev)); setText(el.freq,S.freq.toFixed(1)+' Hz');
+    // 両どなりの音とことばでの判定
+    setText(el.nbLowName,noteLabel(S.writtenNearest-1)); setText(el.nbHighName,noteLabel(S.writtenNearest+1));
+    const dv=S.devDisp, lowAmt=dv<-CONFIG.LOCK_CENTS?clamp(-dv/30,0,1):0, highAmt=dv>CONFIG.LOCK_CENTS?clamp(dv/30,0,1):0;
+    { const ol=(0.22+0.78*lowAmt).toFixed(2), oh=(0.22+0.78*highAmt).toFixed(2);
+      el.nbLow._idle=0; if(el.nbLow._o!==ol+p.flat){ el.nbLow._o=ol+p.flat; el.nbLow.style.opacity=ol; el.nbLow.style.color=rgba(p.flat,1); el.nbLow.style.textShadow=lowAmt>0.3?`0 0 14px ${rgba(p.flat,0.9)}`:'none'; }
+      if(el.nbHigh._o!==oh+p.sharp){ el.nbHigh._o=oh+p.sharp; el.nbHigh.style.opacity=oh; el.nbHigh.style.color=rgba(p.sharp,1); el.nbHigh.style.textShadow=highAmt>0.3?`0 0 14px ${rgba(p.sharp,0.9)}`:'none'; } }
+    setText(el.badge,statusOf(S.dev)); if(el.badge._o!=='1'){ el.badge._o='1'; el.badge.style.opacity='1'; }
+    const bc=rgba(devColor(p,S.devDisp,true),1); if(el.badge._c!==bc){ el.badge._c=bc; el.badge.style.color=bc; }
     const parts=[];
     if(settings.transp!=='C'){ const cn=NAMES[mod(S.nearest,12)]; parts.push(`実音 ${cn}${Math.floor(S.nearest/12)-1}`); }
     if(chordOn()){ const ch=CHORDS[settings.chord]; parts.push(S.chordTone?`🎶 和音${NAMES[settings.root]}${settings.chord==='min'?'m':settings.chord==='dom7'?'7':''}の${INTERVALS[S.interval]}・純正目標 ${fmtC(S.target)}${S.harmony?'・和音ボーナス×1.5！':''}`:`和音（${ch.iv.map(i=>NAMES[(settings.root+i)%12]).join('・')}）以外の音`); }
     else if(settings.temper==='just') parts.push(`根音${NAMES[settings.root]}から${INTERVALS[S.interval]}・純正目標 ${fmtC(S.target)}（平均律比 ${fmtC(S.centsET)}）`);
-    else parts.push(S.locked?'PERFECT! そのままキープ！':S.dev<0?'↑ 少し低いです（もう少し高く）':'↓ 少し高いです（もう少し低く）');
     setText(el.sub,parts.join(' ・ '));
   } else {
     setText(el.noteName,'—'); setText(el.noteAcc,''); setText(el.noteOct,''); setText(el.cents,'±0.0¢'); setText(el.freq,'--- Hz');
+    setText(el.nbLowName,'—'); setText(el.nbHighName,'—'); if(!el.nbLow._idle){ el.nbLow._idle=1; el.nbLow._o=''; el.nbHigh._o=''; el.nbLow.style.opacity=0.22; el.nbHigh.style.opacity=0.22; el.nbLow.style.textShadow='none'; el.nbHigh.style.textShadow='none'; }
+    if(el.badge._o!=='0'){ el.badge._o='0'; el.badge.style.opacity='0'; }
     setText(el.sub, (audio.micOn||audio.testOn)?'音を鳴らしてください 🎵':(settings.admin?'🎤マイク または 🔊テスト音 を押してね':'🎤「マイク開始」を押してね'));
   }
   const col=rgba(devColor(p,S.devDisp,S.active),1);
