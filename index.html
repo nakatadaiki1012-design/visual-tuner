@@ -57,8 +57,9 @@
   .muted{ color:var(--muted); }
   .accent{ color:var(--accent); }
   .panel{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); }
+  /* ※クラス名を blur にすると Tailwind の「画面全体をぼかす」と衝突するので glassblur にしている */
   /* 動く背景の上のぼかしは毎フレーム再計算されて重いので、パソコンで高画質のときだけ使う */
-  body.blur .panel{ backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+  body.glassblur .panel{ backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
   .panel-solid{ background:var(--bg); border-left:1px solid var(--border); }
   .btn{ display:inline-flex; align-items:center; gap:.4rem; padding:.5rem .8rem; border-radius:calc(var(--radius) * .7); border:1px solid var(--border); background:var(--btn); color:var(--text); font-size:.85rem; font-weight:700; cursor:pointer; transition:transform .1s, background .2s, box-shadow .2s; white-space:nowrap; }
   @media (hover:hover){ .btn:hover{ transform:translateY(-1px); } }
@@ -370,7 +371,7 @@ const PERF_LEVELS = [
   { name:'高画質', glow:1,   pScale:1,    dprCap:2   },
 ];
 const PERF = { level:2, glow:1, pScale:1, dprCap:2, ms:16.7, work:3, fps:60, down:0, up:0 };
-function applyPerfLevel(l){ l=clamp(l,0,2); const changed=l!==PERF.level; PERF.level=l; Object.assign(PERF,PERF_LEVELS[l]); document.body.classList.toggle('blur', l>=2 && window.matchMedia('(hover:hover) and (pointer:fine)').matches); if(changed && typeof resize==='function') resize(); }
+function applyPerfLevel(l){ l=clamp(l,0,2); const changed=l!==PERF.level; PERF.level=l; Object.assign(PERF,PERF_LEVELS[l]); document.body.classList.toggle('glassblur', l>=2 && window.matchMedia('(hover:hover) and (pointer:fine)').matches); if(changed && typeof resize==='function') resize(); }
 function perfTick(frameMs, workMs){
   if(frameMs>250) return;                               // タブ復帰直後などは無視
   PERF.ms += (frameMs-PERF.ms)*0.05; PERF.work += (workMs-PERF.work)*0.05; PERF.fps=1000/PERF.ms;
