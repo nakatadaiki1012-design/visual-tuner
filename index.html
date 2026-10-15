@@ -356,6 +356,9 @@ const CONFIG = {
   FFT_SIZE: 4096,         // 解析サイズ（大きいほど低音に強いが遅れる）
   MAX_PARTICLES: 900,     // パーティクル上限
   TIMBRE_CLEAR: 0.06,     // 倍音の割合がこれ未満なら「クリアな響き」
+  PURE_DB_MIN: -38,       // 倍音が基音よりこれ以上小さい（dB）と「基音だけ」とみなす（不正防止）
+  PURE_DB_FULL: -22,      // 倍音がこれ以上あれば、ふつうの楽器・声として100%の速さで貯まる
+  PURE_RATE: 0.1,         // 基音だけの音のとき、レベルが貯まる速さ（0.1＝10%）
   TIMBRE_RICH: 0.22,      // これ以上なら「倍音豊か！」（間は「バランスの良い響き」）
   // ホールド秒数ごとの称号
   COMBO_WORDS: [[12,'GODLIKE'],[8,'AMAZING'],[5,'GREAT'],[3,'NICE'],[0,'']],
@@ -425,6 +428,7 @@ function devColor(p, dev, active=true){
 const S = {
   t:0, active:false, freq:0, rms:0, level:0, rich:0, harm:[0,0,0,0,0],
   midiSmooth:69, nearest:69, writtenNearest:69, pc:9, octave:4, interval:0,
+  gen:1, genRaw:1, accV:1,
   centsET:0, centsDisp:0, target:0, dev:0, devDisp:0, devV:0, centsV:0,
   locked:false, hold:0, best:0, milestone:0, intensity:0, okSince:-1, lastOk:-1e9, lastSignal:-1e9, charge:0, acc:1, tlv:1, tlf:0,
   get fx(){ return settings.fx*PERF.pScale*(1+0.08*(this.tlv-1)); },
@@ -676,8 +680,11 @@ function analyze(now, dt){
     if(n>S.milestone){ S.milestone=n; th.onMilestone && th.onMilestone(n); comboPop(); }
   }
   // 合えば合うほど速く盛り上がる（±1¢以内は2倍、±2¢以内は1.5倍）
-  const ad=Math.abs(S.dev); S.acc = (ad<1?2:ad<2?1.5:1)*(S.chordTone&&locked?1.5:1); S.harmony = S.chordTone && locked;
-  S.charge = locked ? S.charge+dt*S.acc : 0;
+  // 基音だけの音（スマホアプリの基準音などをマイクに入れる不正）は、レベルや進行が貯まりにくい。テスト音（管理者）は影響なし
+  { const hr=10*Math.log10(S.rich/(1-S.rich)+1e-12), raw=CONFIG.PURE_RATE+(1-CONFIG.PURE_RATE)*clamp((hr-CONFIG.PURE_DB_MIN)/(CONFIG.PURE_DB_FULL-CONFIG.PURE_DB_MIN),0,1);
+    S.genRaw += (raw-S.genRaw)*Math.min(1,dt*3); S.gen = audio.testOn ? 1 : S.genRaw; }
+  const ad=Math.abs(S.dev); S.accV = (ad<1?2:ad<2?1.5:1)*(S.chordTone&&locked?1.5:1); S.acc = S.accV*S.gen; S.harmony = S.chordTone && locked;
+  S.charge = locked ? S.charge+dt*S.accV : 0;          // 見た目の盛り上がりは、倍音に関係なく通常どおり
   const targetI = locked ? Math.min(1,S.charge/CONFIG.MAX_INTENSITY_SEC) : 0;
   S.intensity += (targetI-S.intensity)*Math.min(1,dt*(locked?6:3));
 }
@@ -723,7 +730,8 @@ function levelOf(total){ return 1+Math.floor(Math.sqrt(total/5)); }
 function levelStart(lv){ return 5*(lv-1)**2; }
 function titleOf(lv){ let t=TITLES[0][1]; for(const [l,n] of TITLES) if(lv>=l) t=n; return t; }
 function fmtTime(s){ s=Math.floor(s); const h=Math.floor(s/3600), m=Math.floor(s/60)%60, ss=s%60; return h?`${h}時間${m}分`:m?`${m}分${ss}秒`:`${ss}秒`; }
-const counting=()=>audio.micOn && !audio.testOn;
+// 記録がたまるのは、マイクで練習したとき。テスト音は管理者モードのときだけ（倍音に関係なく通常どおり貯まる）
+const counting=()=>(audio.micOn && !audio.testOn) || (audio.testOn && settings.admin);
 const RW={ tier:0, pbDone:false, startBest:0, saveT:0, banners:[], bannerT:0, toasts:[], toastT:0 };
 
 /* テーマレベル：累計（精度ボーナス込み）の秒数で Lv.1〜10 */
@@ -760,7 +768,7 @@ function rewardsTick(dt){
     queueBanner(`${th.icon} ${th.label} Lv.${tl1}`,'level',perk?`新しい演出「${perk[1]}」解放！`:tl1===10?'MAX！ 最高レベル到達':'演出がパワーアップ！'); confetti(50);
     if(tl1===UNLOCK_LV){ const n=unlockedCount(); if(n>(RW.unlocked||UNLOCK_GROUP)){ RW.unlocked=n; queueBanner(`🔓 新しいテーマが${UNLOCK_GROUP}種類アンロック！`,'level',THEME_KEYS.slice(n-UNLOCK_GROUP,n).map(k=>THEMES[k].icon).join(' ')); confetti(120); saveProg(); } } }
   const lv0=levelOf(PROG.total), t=dayStr(new Date());
-  PROG.total+=dt; PROG.days[t]=(PROG.days[t]||0)+dt;
+  PROG.total+=dt*S.gen; PROG.days[t]=(PROG.days[t]||0)+dt*S.gen;
   const lv=levelOf(PROG.total);
   if(lv>lv0){ queueBanner(`LEVEL UP! Lv.${lv}`,'level',titleOf(lv)); confetti(60); if(lv>=10) unlock('lv10'); if(lv>=20) unlock('lv20'); }
   if(S.hold>PROG.best){ if(!RW.pbDone && RW.startBest>=3){ RW.pbDone=true; queueBanner('自己ベスト更新！','pb',`${RW.startBest.toFixed(1)}秒 → 更新中`); unlock('pb'); confetti(90); } PROG.best=S.hold; }
@@ -5669,6 +5677,7 @@ function updateDOM(){
     setText(el.badge,statusOf(S.dev)); if(el.badge._o!=='1'){ el.badge._o='1'; el.badge.style.opacity='1'; }
     const bc=rgba(devColor(p,S.devDisp,true),1); if(el.badge._c!==bc){ el.badge._c=bc; el.badge.style.color=bc; }
     const parts=[];
+    if(counting() && S.active && S.gen<0.5) parts.push('🔇 倍音のない音（基音だけ）は、レベルがたまりにくくなります');
     if(settings.transp!=='C'){ const cn=NAMES[mod(S.nearest,12)]; parts.push(`実音 ${cn}${Math.floor(S.nearest/12)-1}`); }
     if(chordOn()){ const ch=CHORDS[settings.chord]; parts.push(S.chordTone?`🎶 和音${NAMES[settings.root]}${settings.chord==='min'?'m':settings.chord==='dom7'?'7':''}の${INTERVALS[S.interval]}・純正目標 ${fmtC(S.target)}${S.harmony?'・和音ボーナス×1.5！':''}`:`和音（${ch.iv.map(i=>NAMES[(settings.root+i)%12]).join('・')}）以外の音`); }
     else if(settings.temper==='just') parts.push(`根音${NAMES[settings.root]}から${INTERVALS[S.interval]}・純正目標 ${fmtC(S.target)}（平均律比 ${fmtC(S.centsET)}）`);
