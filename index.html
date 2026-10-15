@@ -358,7 +358,10 @@ const CONFIG = {
   TIMBRE_CLEAR: 0.06,     // 倍音の割合がこれ未満なら「クリアな響き」
   PURE_DB_MIN: -38,       // 倍音が基音よりこれ以上小さい（dB）と「基音だけ」とみなす（不正防止）
   PURE_DB_FULL: -22,      // 倍音がこれ以上あれば、ふつうの楽器・声として100%の速さで貯まる
-  PURE_RATE: 0.1,         // 基音だけの音のとき、レベルが貯まる速さ（0.1＝10%）
+  PURE_RATE: 0.1,
+  STEADY_CENTS_MIN: 0.3,  // 音程の細かい揺れ（セント）がこれ以下だと「機械のようにまっすぐ」とみなす（不正防止）
+  STEADY_CENTS_FULL: 0.8, // これ以上揺れていれば、人間・楽器の自然な揺れとして100%
+  STEADY_RATE: 0.15,      // まっすぐすぎる音のとき、レベルが貯まる速さ（0.15＝15%）         // 基音だけの音のとき、レベルが貯まる速さ（0.1＝10%）
   TIMBRE_RICH: 0.22,      // これ以上なら「倍音豊か！」（間は「バランスの良い響き」）
   // ホールド秒数ごとの称号
   COMBO_WORDS: [[12,'GODLIKE'],[8,'AMAZING'],[5,'GREAT'],[3,'NICE'],[0,'']],
@@ -428,7 +431,7 @@ function devColor(p, dev, active=true){
 const S = {
   t:0, active:false, freq:0, rms:0, level:0, rich:0, harm:[0,0,0,0,0],
   midiSmooth:69, nearest:69, writtenNearest:69, pc:9, octave:4, interval:0,
-  gen:1, genRaw:1, accV:1,
+  gen:1, genRaw:1, accV:1, jmu:0, jvar:1, jit:1, stdRaw:1,
   centsET:0, centsDisp:0, target:0, dev:0, devDisp:0, devV:0, centsV:0,
   locked:false, hold:0, best:0, milestone:0, intensity:0, okSince:-1, lastOk:-1e9, lastSignal:-1e9, charge:0, acc:1, tlv:1, tlf:0,
   get fx(){ return settings.fx*PERF.pScale*(1+0.08*(this.tlv-1)); },
@@ -631,10 +634,12 @@ function analyze(now, dt){
   const valid = r.freq>=CONFIG.MIN_FREQ && r.freq<=CONFIG.MAX_FREQ && r.clarity>=CONFIG.CLARITY;
   if(valid){
     const m = 69 + 12*Math.log2(r.freq/settings.ref);
-    if(!S.active){ S.midiSmooth=m; pitchHist=[m]; jumpCount=0; }
+    if(!S.active){ S.midiSmooth=m; pitchHist=[m]; jumpCount=0; S.jmu=m*100; S.jvar=1; }
     else if(Math.abs(m-S.midiSmooth) > 0.6){                    // 大きな跳躍は3フレーム続いたら採用
-      if(++jumpCount>=3){ S.midiSmooth=m; pitchHist=[m]; jumpCount=0; }
+      if(++jumpCount>=3){ S.midiSmooth=m; pitchHist=[m]; jumpCount=0; S.jmu=m*100; S.jvar=1; }
     } else {
+      // 音程の細かい揺れ（ばらつき）を測る：人間や楽器は自然に揺れるが、機械の音はほぼ揺れない
+      { const e=m*100-S.jmu; S.jvar+=(e*e-S.jvar)*Math.min(1,dt/1.5); S.jmu+=e*Math.min(1,dt/1.0); S.jit=Math.sqrt(S.jvar); }
       jumpCount=0; pitchHist.push(m); if(pitchHist.length>5) pitchHist.shift();
       S.midiSmooth += (median(pitchHist)-S.midiSmooth)*Math.min(1,dt*20);
     }
@@ -682,7 +687,10 @@ function analyze(now, dt){
   // 合えば合うほど速く盛り上がる（±1¢以内は2倍、±2¢以内は1.5倍）
   // 基音だけの音（スマホアプリの基準音などをマイクに入れる不正）は、レベルや進行が貯まりにくい。テスト音（管理者）は影響なし
   { const hr=10*Math.log10(S.rich/(1-S.rich)+1e-12), raw=CONFIG.PURE_RATE+(1-CONFIG.PURE_RATE)*clamp((hr-CONFIG.PURE_DB_MIN)/(CONFIG.PURE_DB_FULL-CONFIG.PURE_DB_MIN),0,1);
-    S.genRaw += (raw-S.genRaw)*Math.min(1,dt*3); S.gen = audio.testOn ? 1 : S.genRaw; }
+    S.genRaw += (raw-S.genRaw)*Math.min(1,dt*3);
+    const st=CONFIG.STEADY_RATE+(1-CONFIG.STEADY_RATE)*clamp((S.jit-CONFIG.STEADY_CENTS_MIN)/(CONFIG.STEADY_CENTS_FULL-CONFIG.STEADY_CENTS_MIN),0,1);
+    S.stdRaw += (st-S.stdRaw)*Math.min(1,dt*2);
+    S.gen = audio.testOn ? 1 : Math.max(0.02,S.genRaw*S.stdRaw); }
   const ad=Math.abs(S.dev); S.accV = (ad<1?2:ad<2?1.5:1)*(S.chordTone&&locked?1.5:1); S.acc = S.accV*S.gen; S.harmony = S.chordTone && locked;
   S.charge = locked ? S.charge+dt*S.accV : 0;          // 見た目の盛り上がりは、倍音に関係なく通常どおり
   const targetI = locked ? Math.min(1,S.charge/CONFIG.MAX_INTENSITY_SEC) : 0;
@@ -711,7 +719,7 @@ const ACH=[
   {id:'t3600',icon:'⌛',name:'累計1時間',desc:'PERFECTの合計が1時間'},
   {id:'notes12',icon:'🎼',name:'12音コンプリート',desc:'12の音名すべてでPERFECT'},
   {id:'themes10',icon:'🎨',name:'テーマめぐり',desc:'10種類のテーマでPERFECT'},
-  {id:'themesAll',icon:'👑',name:'全テーマ制覇',desc:'すべてのテーマでPERFECT'},
+  {id:'themesAll',icon:'👑',name:'全テーマ制覇',desc:'すべてのテーマをレベルMAXにした'},
   {id:'just',icon:'🎶',name:'純正の響き',desc:'純正律モードで5秒キープ'},
   {id:'transp',icon:'🎷',name:'移調楽器マスター',desc:'B♭/E♭/F表示でPERFECT'},
   {id:'baroque',icon:'🎻',name:'バロックの調べ',desc:'415HzでPERFECT'},
@@ -747,13 +755,14 @@ function unlockedCount(){ const N=THEME_KEYS.length; if(PROG.unlockAll || settin
 function isUnlocked(k){ return THEME_KEYS.indexOf(k)<unlockedCount(); }
 function unlockHint(){ const n=unlockedCount(), grp=THEME_KEYS.slice(n-UNLOCK_GROUP,n), left=grp.filter(k=>tlvOf(PROG.tlv[k]||0)<UNLOCK_LV);
   return { grp, left, text:`${n-UNLOCK_GROUP+1}〜${n}番のテーマをすべて Lv.${UNLOCK_LV} にすると次の${UNLOCK_GROUP}種類が解放（あと${left.length}種類）` }; }
+const allThemesMax=()=>THEME_KEYS.every(k=>tlvOf(PROG.tlv[k]||0)>=TLV_XP.length);
 function syncThemeLevel(){ S.tlv=tlvOf(PROG.tlv[settings.theme]||0); S.tlf=(S.tlv-1)/9; }
 function rewardsOnLock(){
   RW.tier=0; RW.pbDone=false; RW.startBest=PROG.best;
   if(!counting()) return;
   unlock('first'); touchDay();
   const pc=mod(S.nearest,12); if(!PROG.notes.includes(pc)){ PROG.notes.push(pc); if(PROG.notes.length>=12) unlock('notes12'); }
-  if(!PROG.themes.includes(settings.theme)){ PROG.themes.push(settings.theme); if(PROG.themes.length>=10) unlock('themes10'); if(THEME_KEYS.every(k=>PROG.themes.includes(k))) unlock('themesAll'); }
+  if(!PROG.themes.includes(settings.theme)){ PROG.themes.push(settings.theme); if(PROG.themes.length>=10) unlock('themes10'); }
   if(settings.transp!=='C') unlock('transp');
   if(+settings.ref===415) unlock('baroque');
   saveProg();
@@ -766,6 +775,7 @@ function rewardsTick(dt){
   const tl0=tlvOf(x0), tl1=tlvOf(PROG.tlv[k]);
   if(tl1>tl0){ const th=theme(), perk=(th.lv||[]).find(q=>q[0]===tl1); syncThemeLevel();
     queueBanner(`${th.icon} ${th.label} Lv.${tl1}`,'level',perk?`新しい演出「${perk[1]}」解放！`:tl1===10?'MAX！ 最高レベル到達':'演出がパワーアップ！'); confetti(50);
+    if(tl1>=TLV_XP.length && allThemesMax()) unlock('themesAll');
     if(tl1===UNLOCK_LV){ const n=unlockedCount(); if(n>(RW.unlocked||UNLOCK_GROUP)){ RW.unlocked=n; queueBanner(`🔓 新しいテーマが${UNLOCK_GROUP}種類アンロック！`,'level',THEME_KEYS.slice(n-UNLOCK_GROUP,n).map(k=>THEMES[k].icon).join(' ')); confetti(120); saveProg(); } } }
   const lv0=levelOf(PROG.total), t=dayStr(new Date());
   PROG.total+=dt*S.gen; PROG.days[t]=(PROG.days[t]||0)+dt*S.gen;
@@ -5677,7 +5687,7 @@ function updateDOM(){
     setText(el.badge,statusOf(S.dev)); if(el.badge._o!=='1'){ el.badge._o='1'; el.badge.style.opacity='1'; }
     const bc=rgba(devColor(p,S.devDisp,true),1); if(el.badge._c!==bc){ el.badge._c=bc; el.badge.style.color=bc; }
     const parts=[];
-    if(counting() && S.active && S.gen<0.5) parts.push('🔇 倍音のない音（基音だけ）は、レベルがたまりにくくなります');
+    if(counting() && S.active){ if(S.genRaw<0.5) parts.push('🔇 倍音のない音（基音だけ）は、レベルがたまりにくくなります'); else if(S.stdRaw<0.5) parts.push('〰 音程がまったく揺れない音は、レベルがたまりにくくなります'); }
     if(settings.transp!=='C'){ const cn=NAMES[mod(S.nearest,12)]; parts.push(`実音 ${cn}${Math.floor(S.nearest/12)-1}`); }
     if(chordOn()){ const ch=CHORDS[settings.chord]; parts.push(S.chordTone?`🎶 和音${NAMES[settings.root]}${settings.chord==='min'?'m':settings.chord==='dom7'?'7':''}の${INTERVALS[S.interval]}・純正目標 ${fmtC(S.target)}${S.harmony?'・和音ボーナス×1.5！':''}`:`和音（${ch.iv.map(i=>NAMES[(settings.root+i)%12]).join('・')}）以外の音`); }
     else if(settings.temper==='just') parts.push(`根音${NAMES[settings.root]}から${INTERVALS[S.interval]}・純正目標 ${fmtC(S.target)}（平均律比 ${fmtC(S.centsET)}）`);
@@ -5813,6 +5823,8 @@ document.addEventListener('visibilitychange',()=>{ if(!document.hidden && audio.
 
 /* ===================== 起動 ===================== */
 buildSettings();
+// 「全テーマ制覇」は、全テーマをレベルMAXにしたときだけ（以前の条件で取れていた場合は取り消す）
+if(PROG.ach && PROG.ach.themesAll && !allThemesMax()){ delete PROG.ach.themesAll; saveProg(); }
 if(!isUnlocked(settings.theme)) settings.theme=THEME_KEYS[0];
 RW.unlocked=unlockedCount(); refreshLocks();
 // 演出エリアを左右にスワイプしてテーマ切替
