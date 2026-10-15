@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Visual Tuner</title>
 <meta name="description" content="ピッチが合うと最高に気持ちいい、エンタメ特化型ビジュアル・チューナー">
+<meta name="google-site-verification" content="0w3NXLTUAjcsJ0vUe9BwC5dzWu9-m7pLrBemsSBY3yk" />
 <script src="https://cdn.tailwindcss.com/3.4.16"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -364,7 +365,7 @@ try { Object.assign(settings, JSON.parse(localStorage.getItem('visualTuner.setti
 /* ===================== 処理落ち対策（自動画質調整） ===================== */
 // 0=軽量 / 1=標準 / 2=高画質。auto のときは実際の描画速度を見て自動で切り替え
 const PERF_LEVELS = [
-  { name:'軽量',   glow:0,   pScale:0.35, dprCap:1   },
+  { name:'軽量',   glow:0,   pScale:0.35, dprCap:1.25 },
   { name:'標準',   glow:0.5, pScale:0.65, dprCap:1.5 },
   { name:'高画質', glow:1,   pScale:1,    dprCap:2   },
 ];
@@ -5490,10 +5491,12 @@ const cv=$('fx'), ctx=cv.getContext('2d');
 (()=>{ const d=Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype,'shadowBlur'); if(!d||!d.set) return;
   Object.defineProperty(ctx,'shadowBlur',{ configurable:true, get(){ return d.get.call(this); }, set(v){ d.set.call(this, v*PERF.glow); } }); })();
 const mcv=$('meter'), mctx=mcv.getContext('2d');
-let W=0,H=0,DPR=1;
+const FINE_POINTER=window.matchMedia('(hover:hover) and (pointer:fine)');
+let W=0,H=0,DPR=1,lastRawDPR=1;
 const G={cx:0,cy:0,R:100};
 function resize(){
-  DPR=Math.min(PERF.dprCap,window.devicePixelRatio||1);
+  // パソコン（マウス操作）では、画質を下げても解像度は落とさない（ボケて見えるため）。スマホだけ解像度も調整する
+  DPR=lastRawDPR=window.devicePixelRatio||1; DPR=FINE_POINTER.matches?Math.min(2,DPR):Math.min(PERF.dprCap,DPR);
   W=window.innerWidth; H=window.innerHeight;
   const cw=Math.round(W*DPR), ch=Math.round(H*DPR); if(cv.width!==cw) cv.width=cw; if(cv.height!==ch) cv.height=ch;
   const r=$('stage').getBoundingClientRect();
@@ -5795,6 +5798,7 @@ function updatePerfLabel(){ const e=$('perfLabel'); if(e) e.textContent=`いま�
 applyPerfLevel(settings.quality==='auto'?2:+settings.quality);
 let dtS=1/60;
 function frame(now){
+  if((window.devicePixelRatio||1)!==lastRawDPR) resize();          // ブラウザの拡大縮小や、別のモニターへ移動したとき
   const raw=now-lastT, dt=Math.min(0.05,Math.max(0,raw/1000)); lastT=now;
   dtS+=(dt-dtS)*0.3;                       // 描画用の時間はなめらかに（フレームのばらつきで動きがカクつくのを防ぐ）
   S.t+=dtS;
