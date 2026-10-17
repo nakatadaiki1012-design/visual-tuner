@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>分子ラボ3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="化学基礎の授業で使える、分子や結晶を立体で回して見られるアプリ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Lexend:wght@400;500;600&display=swap">
+<style>
+/* レイアウト：左に分子の棚、中央に立体ステージ、右に解説カード（狭い画面では縦に並ぶ） */
+:root {
+  --bg: #edf0f5;
+  --panel: #ffffff;
+  --ink: #152033;
+  --muted: #5a6577;
+  --line: #d5dbe5;
+  --chip: #e6ebf3;
+  --accent: #2753d6;
+  --accent-ink: #ffffff;
+  --warm: #d9661f;
+  --lp: #8a6cf0;
+  --stage-1: #f8fafd;
+  --stage-2: #d9e1ec;
+  --ok: #1f8a5b;
+  --font-display: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-data: "Lexend", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --r: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b111c; --panel: #121a29; --ink: #e5ebf5; --muted: #95a1b6; --line: #253049; --chip: #1b2539;
+    --accent: #7096ff; --accent-ink: #0b111c; --warm: #ffa04d; --lp: #b7a2ff;
+    --stage-1: #19243a; --stage-2: #060a12; --ok: #4fd19a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b111c; --panel: #121a29; --ink: #e5ebf5; --muted: #95a1b6; --line: #253049; --chip: #1b2539;
+  --accent: #7096ff; --accent-ink: #0b111c; --warm: #ffa04d; --lp: #b7a2ff;
+  --stage-1: #19243a; --stage-2: #060a12; --ok: #4fd19a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+sub, sup { font-size: 0.68em; line-height: 0; }
+
+.top {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: 0.02em; margin: 0; }
+.brand b { color: var(--accent); }
+.tagline { color: var(--muted); font-size: 13px; margin: 0; }
+
+.app {
+  flex: 1; min-height: 0; display: grid; gap: 12px;
+  grid-template-columns: 300px minmax(0, 1fr) 360px; grid-template-areas: "lib stage info";
+  padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.lib { grid-area: lib; display: flex; flex-direction: column; overflow: hidden; }
+.info { grid-area: info; overflow-y: auto; padding: 18px; }
+.stage-wrap { grid-area: stage; position: relative; border-radius: var(--r); overflow: hidden; min-height: 0;
+  background: radial-gradient(120% 90% at 50% 35%, var(--stage-1), var(--stage-2)); border: 1px solid var(--line); }
+
+/* --- 分子の棚 --- */
+.search { padding: 14px 14px 8px; position: relative; }
+.search label { display: block; font-size: 12px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 4px; }
+.search input {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+  font-family: var(--font-data); font-size: 16px;
+}
+.search input:focus { outline: none; border-color: var(--accent); }
+.results { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.results li > button, .results li > div {
+  width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 8px 10px;
+  display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+}
+.results li > button:hover { border-color: var(--accent); }
+.results .r-f { font-family: var(--font-data); font-weight: 600; }
+.results .r-n { font-weight: 700; }
+.results .r-tag { font-size: 11px; color: var(--muted); margin-left: auto; }
+.results .r-msg { font-size: 13px; color: var(--muted); display: block; }
+.results .r-auto { border-style: dashed; border-color: var(--accent); }
+
+.tabs { display: flex; gap: 4px; padding: 6px 14px 8px; flex-wrap: wrap; }
+.tab { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 11px; font-size: 13px; color: var(--muted); }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.grid { flex: 1; overflow-y: auto; padding: 4px 14px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; align-content: start; }
+.card {
+  text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 8px 10px; min-width: 0;
+  display: flex; flex-direction: column; gap: 0;
+}
+.card:hover { border-color: var(--accent); }
+.card[aria-current="true"] { border-color: var(--accent); background: var(--chip); box-shadow: inset 0 0 0 1px var(--accent); }
+.card .f { font-family: var(--font-data); font-weight: 600; font-size: 16px; }
+.card .n { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- ステージ --- */
+#stage { position: absolute; inset: 0; touch-action: none; }
+#stage canvas { display: block; width: 100%; height: 100%; }
+.labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.lbl { position: absolute; left: 0; top: 0; white-space: nowrap; font-family: var(--font-data); font-weight: 600; will-change: transform; }
+.lbl-atom { font-size: 14px; color: #111; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 5px #fff; }
+.lbl-atom.on-dark { color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 5px #000; }
+.lbl-angle { font-size: 13px; color: var(--accent-ink); background: var(--accent); padding: 0 6px; border-radius: 6px; }
+.lbl-mu { font-size: 12px; color: var(--accent-ink); background: var(--warm); padding: 1px 7px; border-radius: 6px; font-family: var(--font-body); }
+.lbl-lp { font-size: 11px; color: var(--lp); font-family: var(--font-body); }
+
+.ov { position: absolute; display: flex; gap: 6px; z-index: 2; }
+.ov-tl { top: 10px; left: 10px; }
+.ov-tr { top: 10px; right: 10px; }
+.ov-b { left: 10px; right: 10px; bottom: 10px; flex-wrap: wrap; align-items: flex-end; }
+.seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; border-radius: 7px; padding: 5px 10px; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.ibtn { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
+.ibtn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+.tg { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.tg::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--muted); }
+.tg[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.tg[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
+.hint { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--muted); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; z-index: 1; transition: opacity .6s; white-space: nowrap; }
+.hint.gone { opacity: 0; pointer-events: none; }
+.atom-chip { position: absolute; left: 10px; bottom: 54px; z-index: 2; background: var(--panel); border: 1px solid var(--warm); border-radius: 10px;
+  padding: 6px 10px; font-size: 13px; max-width: calc(100% - 20px); display: flex; gap: 8px; align-items: center; }
+.atom-chip b { font-family: var(--font-data); font-size: 16px; }
+.atom-chip button { border: 0; background: transparent; color: var(--muted); padding: 0 4px; font-size: 16px; }
+.fallback { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
+
+/* --- 解説カード --- */
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { display: inline-block; font-size: 12px; padding: 1px 9px; border-radius: 999px; background: var(--chip); color: var(--ink); letter-spacing: 0; }
+.mol-name { font-family: var(--font-display); font-weight: 800; font-size: 28px; line-height: 1.25; margin: 6px 0 2px; text-wrap: balance; }
+.mol-formula { font-family: var(--font-data); font-size: 22px; font-weight: 500; }
+.mol-formula small { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 8px; }
+.mol-en { color: var(--muted); font-size: 13px; font-family: var(--font-data); }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 16px 0 10px; }
+.fact { background: var(--bg); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.fact dt { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+.fact dd { margin: 0; font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
+.fact dd .u { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 2px; }
+.fact.polar dd { color: var(--warm); }
+.fact.nonpolar dd { color: var(--ok); }
+.calc { font-family: var(--font-data); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; margin-bottom: 12px; overflow-wrap: anywhere; }
+.note { font-size: 13px; color: var(--muted); margin: -4px 0 12px; }
+.sec-h { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; font-weight: 700; }
+.desc { margin: 0; }
+.props { width: 100%; border-collapse: collapse; font-size: 14px; }
+.props th { text-align: left; font-weight: 500; color: var(--muted); padding: 5px 8px 5px 0; width: 9em; vertical-align: top; }
+.props td { padding: 5px 0; font-variant-numeric: tabular-nums; }
+.props tr + tr th, .props tr + tr td { border-top: 1px solid var(--line); }
+.point { background: var(--chip); border-radius: 10px; padding: 10px 12px; margin-top: 14px; }
+.point h3 { margin: 0 0 4px; font-size: 13px; color: var(--accent); }
+.point p { margin: 0; font-size: 14px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 3px 11px; font-size: 13px; }
+.chips button:hover { border-color: var(--accent); }
+.legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); display: inline-block; }
+.atom-card { border: 1.5px solid var(--warm); border-radius: var(--r); padding: 12px; margin-bottom: 16px; }
+.atom-card h3 { margin: 0; font-size: 17px; display: flex; gap: 8px; align-items: baseline; }
+.atom-card h3 b { font-family: var(--font-data); font-size: 24px; }
+.atom-card .facts { margin: 10px 0 6px; }
+.atom-card ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; font-family: var(--font-data); }
+
+.stage-wrap.is-max { position: fixed; inset: 0; z-index: 50; border-radius: 0; height: auto; }
+@media (max-width: 1180px) {
+  body { overflow: auto; height: auto; min-height: 100%; }
+  .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "stage stage" "lib info"; flex: none; }
+  .stage-wrap { height: 62vh; min-height: 380px; }
+  .lib { max-height: 560px; }
+  .info { overflow: visible; }
+}
+@media (max-width: 760px) {
+  .app { display: flex; flex-direction: column; }
+  .lib { order: 1; max-height: none; }
+  .stage-wrap { order: 2; height: 60vh; min-height: 340px; }
+  .info { order: 3; }
+  .grid { display: flex; overflow-x: auto; overflow-y: hidden; padding-bottom: 12px; }
+  .card { flex: 0 0 auto; min-width: 104px; }
+  .ov-b { flex-wrap: nowrap; }
+  .toggles { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .tg { flex: 0 0 auto; }
+  .seg button { padding: 5px 8px; }
+  .hint { display: none; }
+  .mol-name { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .hint { transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 class="brand">分子ラボ<b>3D</b></h1>
+  <p class="tagline">化学基礎の分子・イオン・結晶を、立体で回して見る</p>
+</header>
+
+<main class="app">
+  <aside class="panel lib" aria-label="分子をえらぶ">
+    <div class="search">
+      <label for="q">分子式か名前で探す</label>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="例: H2O, C2H6O, NH4+, エタノール">
+      <ul class="results" id="results" hidden></ul>
+    </div>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="grid" id="grid"></div>
+  </aside>
+
+  <section class="stage-wrap" id="stageWrap" aria-label="立体モデル">
+    <div id="stage"></div>
+    <div class="labels" id="labels"></div>
+    <div class="ov ov-tl">
+      <div class="seg" id="modes" role="group" aria-label="表示のしかた">
+        <button type="button" data-mode="ball" aria-pressed="true">球棒</button>
+        <button type="button" data-mode="space" aria-pressed="false">空間充填</button>
+        <button type="button" data-mode="stick" aria-pressed="false">棒</button>
+      </div>
+    </div>
+    <div class="ov ov-tr">
+      <button type="button" class="ibtn" id="btnReset" title="向きをもどす" aria-label="向きをもどす">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+      </button>
+      <button type="button" class="ibtn" id="btnFull" title="全画面（プロジェクター向け）" aria-label="全画面">
+        <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+    </div>
+    <div class="hint" id="hint">ドラッグで回転・ホイール／ピンチで拡大・原子をクリックで詳しく</div>
+    <div class="atom-chip" id="atomChip" hidden></div>
+    <div class="ov ov-b">
+      <div class="toggles" id="toggles">
+        <button type="button" class="tg" data-k="labels">原子記号</button>
+        <button type="button" class="tg" data-k="lp">非共有電子対</button>
+        <button type="button" class="tg" data-k="angle">結合角</button>
+        <button type="button" class="tg" data-k="polar">極性</button>
+        <button type="button" class="tg" data-k="rotate">自動回転</button>
+        <button type="button" class="tg" data-k="vib">熱運動</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel info" id="info" aria-live="polite"></aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/*ENGINE-START*/
+// ===== 元素データ（化学基礎で使う原子量・電気陰性度・色・半径） =====
+// m: 原子量（教科書の概数）, en: 電気陰性度（ポーリング）, ve: 価電子数,
+// c: 表示色, rc: 共有結合半径(Å), rv: ファンデルワールス半径(Å)
+const EL = {
+  H:  { n: '水素',       z: 1,  m: 1.0,  en: 2.20, ve: 1, c: '#f3f5f8', rc: 0.31, rv: 1.20 },
+  He: { n: 'ヘリウム',   z: 2,  m: 4.0,  en: 0,    ve: 2, c: '#d9ffff', rc: 0.28, rv: 1.40 },
+  Li: { n: 'リチウム',   z: 3,  m: 6.9,  en: 0.98, ve: 1, c: '#cc80ff', rc: 1.28, rv: 1.82 },
+  B:  { n: 'ホウ素',     z: 5,  m: 10.8, en: 2.04, ve: 3, c: '#f5a99a', rc: 0.84, rv: 1.92 },
+  C:  { n: '炭素',       z: 6,  m: 12,   en: 2.55, ve: 4, c: '#4b5059', rc: 0.76, rv: 1.70 },
+  N:  { n: '窒素',       z: 7,  m: 14,   en: 3.04, ve: 5, c: '#3c6fe4', rc: 0.71, rv: 1.55 },
+  O:  { n: '酸素',       z: 8,  m: 16,   en: 3.44, ve: 6, c: '#e8402f', rc: 0.66, rv: 1.52 },
+  F:  { n: 'フッ素',     z: 9,  m: 19,   en: 3.98, ve: 7, c: '#93e06d', rc: 0.57, rv: 1.47 },
+  Ne: { n: 'ネオン',     z: 10, m: 20,   en: 0,    ve: 8, c: '#b3e3f5', rc: 0.58, rv: 1.54 },
+  Na: { n: 'ナトリウム', z: 11, m: 23,   en: 0.93, ve: 1, c: '#a467ea', rc: 1.66, rv: 2.27 },
+  Mg: { n: 'マグネシウム', z: 12, m: 24, en: 1.31, ve: 2, c: '#8aff00', rc: 1.41, rv: 1.73 },
+  Al: { n: 'アルミニウム', z: 13, m: 27, en: 1.61, ve: 3, c: '#bfa6a6', rc: 1.21, rv: 1.84 },
+  Si: { n: 'ケイ素',     z: 14, m: 28,   en: 1.90, ve: 4, c: '#d6b38a', rc: 1.11, rv: 2.10 },
+  P:  { n: 'リン',       z: 15, m: 31,   en: 2.19, ve: 5, c: '#f08a24', rc: 1.07, rv: 1.80 },
+  S:  { n: '硫黄',       z: 16, m: 32,   en: 2.58, ve: 6, c: '#f0cf2e', rc: 1.05, rv: 1.80 },
+  Cl: { n: '塩素',       z: 17, m: 35.5, en: 3.16, ve: 7, c: '#3fcc4c', rc: 1.02, rv: 1.75 },
+  Ar: { n: 'アルゴン',   z: 18, m: 40,   en: 0,    ve: 8, c: '#80d1e3', rc: 1.06, rv: 1.88 },
+  K:  { n: 'カリウム',   z: 19, m: 39,   en: 0.82, ve: 1, c: '#8f40d4', rc: 2.03, rv: 2.75 },
+  Ca: { n: 'カルシウム', z: 20, m: 40,   en: 1.00, ve: 2, c: '#3dff00', rc: 1.76, rv: 2.31 },
+  Mn: { n: 'マンガン',   z: 25, m: 55,   en: 1.55, ve: 2, c: '#9c7ac7', rc: 1.39, rv: 2.00 },
+  Fe: { n: '鉄',         z: 26, m: 56,   en: 1.83, ve: 2, c: '#d8763c', rc: 1.32, rv: 2.00 },
+  Ni: { n: 'ニッケル',   z: 28, m: 58.7, en: 1.91, ve: 2, c: '#50d050', rc: 1.24, rv: 1.63 },
+  Cu: { n: '銅',         z: 29, m: 63.5, en: 1.90, ve: 1, c: '#d08a4c', rc: 1.32, rv: 1.40 },
+  Zn: { n: '亜鉛',       z: 30, m: 65.4, en: 1.65, ve: 2, c: '#7d80b0', rc: 1.22, rv: 1.39 },
+  Br: { n: '臭素',       z: 35, m: 80,   en: 2.96, ve: 7, c: '#a83a2a', rc: 1.20, rv: 1.85 },
+  Ag: { n: '銀',         z: 47, m: 108,  en: 1.93, ve: 1, c: '#c0c0c0', rc: 1.45, rv: 1.72 },
+  Sn: { n: 'スズ',       z: 50, m: 119,  en: 1.96, ve: 4, c: '#668080', rc: 1.39, rv: 2.17 },
+  I:  { n: 'ヨウ素',     z: 53, m: 127,  en: 2.66, ve: 7, c: '#8a3fb0', rc: 1.39, rv: 1.98 },
+  Cs: { n: 'セシウム',   z: 55, m: 133,  en: 0.79, ve: 1, c: '#57178f', rc: 2.44, rv: 3.43 },
+  Ba: { n: 'バリウム',   z: 56, m: 137,  en: 0.89, ve: 2, c: '#00c900', rc: 2.15, rv: 2.68 },
+  Au: { n: '金',         z: 79, m: 197,  en: 2.54, ve: 1, c: '#ffd123', rc: 1.36, rv: 1.66 },
+  Hg: { n: '水銀',       z: 80, m: 201,  en: 2.00, ve: 2, c: '#b8b8d0', rc: 1.32, rv: 1.55 },
+  Pb: { n: '鉛',         z: 82, m: 207,  en: 2.33, ve: 4, c: '#575961', rc: 1.46, rv: 2.02 },
+};
+const METALS = new Set(['Li','Na','Mg','Al','K','Ca','Mn','Fe','Ni','Cu','Zn','Ag','Sn','Cs','Ba','Au','Hg','Pb']);
+
+// ===== 小さなベクトル計算 =====
+const vadd = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const vsub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const vmul = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const vdot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const vcross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const vlen = a => Math.hypot(a[0], a[1], a[2]);
+const vnorm = a => { const l = vlen(a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+const angleDeg = (c, a, b) => {
+  const u = vnorm(vsub(a, c)), w = vnorm(vsub(b, c));
+  return Math.acos(Math.max(-1, Math.min(1, vdot(u, w)))) * 180 / Math.PI;
+};
+function rng(seed) {
+  return () => {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ===== 簡易SMILES（分子の「つながり方」を文字で書く方法）の読み取り =====
+const SMI_VAL = { B: [3], C: [4], N: [3, 5], O: [2], P: [3, 5], S: [2, 4, 6], F: [1], Cl: [1], Br: [1], I: [1] };
+function parseCharge(s) {
+  if (!s) return 0;
+  const sign = s[0] === '+' ? 1 : -1;
+  if (/^[+-]\d+$/.test(s)) return sign * parseInt(s.slice(1), 10);
+  return sign * s.length;
+}
+function parseSmiles(s) {
+  const atoms = [], bonds = [], stack = [], ring = {};
+  let prev = -1, order = 1, i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === '(') { stack.push(prev); i++; continue; }
+    if (ch === ')') { prev = stack.pop(); i++; continue; }
+    if (ch === '-' || ch === '=' || ch === '#') { order = ch === '-' ? 1 : ch === '=' ? 2 : 3; i++; continue; }
+    if (/\d/.test(ch)) {
+      if (ring[ch]) { const [a, o] = ring[ch]; bonds.push({ a, b: prev, o: Math.max(o, order) }); delete ring[ch]; }
+      else ring[ch] = [prev, order];
+      order = 1; i++; continue;
+    }
+    let atom;
+    if (ch === '[') {
+      const j = s.indexOf(']', i);
+      const m = s.slice(i + 1, j).match(/^([A-Z][a-z]?)(?:H(\d*))?([+-]\d+|[+-]+)?$/);
+      if (!m) throw new Error('SMILES: ' + s);
+      atom = { el: m[1], charge: parseCharge(m[3]), hx: m[2] !== undefined ? (m[2] ? +m[2] : 1) : 0, bracket: true };
+      i = j + 1;
+    } else {
+      const two = s.slice(i, i + 2);
+      const el = (two === 'Cl' || two === 'Br') ? two : ch;
+      if (!SMI_VAL[el]) throw new Error('SMILES: ' + s);
+      atom = { el, charge: 0, bracket: false };
+      i += el.length;
+    }
+    atoms.push(atom);
+    const idx = atoms.length - 1;
+    if (prev >= 0) bonds.push({ a: prev, b: idx, o: order });
+    order = 1; prev = idx;
+  }
+  const heavyCount = atoms.length;
+  for (let k = 0; k < heavyCount; k++) {
+    const a = atoms[k];
+    let h;
+    if (a.bracket) h = a.hx;
+    else {
+      const sum = bonds.reduce((s2, b) => s2 + (b.a === k || b.b === k ? b.o : 0), 0);
+      const v = SMI_VAL[a.el].find(x => x >= sum);
+      h = v === undefined ? 0 : v - sum;
+    }
+    for (let t = 0; t < h; t++) {
+      atoms.push({ el: 'H', charge: 0 });
+      bonds.push({ a: k, b: atoms.length - 1, o: 1 });
+    }
+  }
+  return { atoms: atoms.map(a => ({ el: a.el, charge: a.charge })), bonds };
+}
+
+// ===== 分子式の読み取り =====
+function preNormalize(s) {
+  const sup = { '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9' };
+  s = s.replace(/([⁰¹²³⁴⁵⁶⁷⁸⁹]*)([⁺⁻])/g, (m, d, sg) => '^' + [...d].map(c => sup[c]).join('') + (sg === '⁺' ? '+' : '-'));
+  return s.normalize('NFKC').replace(/[−–—]/g, '-').replace(/[・·•]/g, '.').replace(/\s+/g, ' ').trim();
+}
+function parseGroup(s) {
+  let i = 0;
+  const stack = [{}];
+  const readNum = () => { let num = ''; while (/\d/.test(s[i] || '')) num += s[i++]; return num ? parseInt(num, 10) : 1; };
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === '(' || ch === '[') { stack.push({}); i++; }
+    else if (ch === ')' || ch === ']') {
+      if (stack.length < 2) return null;
+      const g = stack.pop(); i++;
+      const k = readNum(), top = stack[stack.length - 1];
+      for (const e in g) top[e] = (top[e] || 0) + g[e] * k;
+    } else if (/[A-Z]/.test(ch)) {
+      let sym = ch;
+      if (/[a-z]/.test(s[i + 1] || '')) sym = ch + s[i + 1];
+      if (!EL[sym]) return null;
+      i += sym.length;
+      const k = readNum(), top = stack[stack.length - 1];
+      top[sym] = (top[sym] || 0) + k;
+    } else return null;
+  }
+  if (stack.length !== 1 || !Object.keys(stack[0]).length) return null;
+  return stack[0];
+}
+function parseBody(s) {
+  const total = {};
+  for (const part of s.split('.')) {
+    const m = part.trim().match(/^(\d*)(.*)$/);
+    const c = parseGroup(m[2]);
+    if (!c) return null;
+    const mult = m[1] ? parseInt(m[1], 10) : 1;
+    for (const e in c) total[e] = (total[e] || 0) + c[e] * mult;
+  }
+  return total;
+}
+// 入力された分子式を読み取る。「SO42-」のように区切りがない場合は2通りの読み方を返す。
+function parseFormulaInput(q) {
+  const s = preNormalize(q).replace(/\s*\(\s*(\d*[+-])\s*\)$/, '^$1');
+  if (!s) return [];
+  const tries = [];
+  let m;
+  if ((m = s.match(/^(.+?)\s*(?:\^|\s)\s*(\d*)([+-])$/))) tries.push([m[1], (m[2] ? +m[2] : 1) * (m[3] === '+' ? 1 : -1)]);
+  else if ((m = s.match(/^(.+?)(\d)([+-])$/))) {
+    // NH4+ は「NH4 の1価」、SO42- は「SO4 の2価」と読むのが自然。数字をつなげると多すぎる方を後回しにする
+    const asCharge = [m[1], +m[2] * (m[3] === '+' ? 1 : -1)], asCount = [m[1] + m[2], m[3] === '+' ? 1 : -1];
+    const lastNum = (m[1].match(/(\d+)$/) || [])[1];
+    if (lastNum && +(lastNum + m[2]) > 12) tries.push(asCharge, asCount); else tries.push(asCount, asCharge);
+  } else if ((m = s.match(/^(.+?)(\++|-+)$/))) tries.push([m[1], m[2].length * (m[2][0] === '+' ? 1 : -1)]);
+  else tries.push([s, 0]);
+  const out = [];
+  for (const [body, charge] of tries) {
+    const counts = parseBody(body.replace(/\s/g, ''));
+    if (counts) out.push({ counts, charge });
+  }
+  return out;
+}
+function hillOrder(counts) {
+  const els = Object.keys(counts);
+  if (counts.C) return ['C', ...(counts.H ? ['H'] : []), ...els.filter(e => e !== 'C' && e !== 'H').sort()];
+  return els.sort();
+}
+function hillString(counts, charge) {
+  let s = hillOrder(counts).map(e => e + (counts[e] > 1 ? counts[e] : '')).join('');
+  if (charge) s += (Math.abs(charge) > 1 ? Math.abs(charge) : '') + (charge > 0 ? '+' : '-');
+  return s;
+}
+const formulaKey = (counts, charge) => hillString(counts, 0) + '|' + (charge || 0);
+function countAtoms(atoms) {
+  const c = {};
+  for (const a of atoms) c[a.el] = (c[a.el] || 0) + 1;
+  return c;
+}
+function massOf(counts) {
+  let total = 0;
+  const parts = hillOrder(counts).map(e => { total += EL[e].m * counts[e]; return { e, m: EL[e].m, n: counts[e] }; });
+  return { total: Math.round(total * 10) / 10, parts };
+}
+
+// ===== 分子式から構造を自動で組み立てる =====
+// 価標（原子の手の数）がちょうど満たされるように、炭素の鎖→ほかの原子→多重結合→水素の順で組み立てる。
+const AUTO_VAL = { H: 1, F: 1, Cl: 1, Br: 1, I: 1, O: 2, S: 2, N: 3, P: 3, B: 3, C: 4, Si: 4 };
+function autoBuild(counts) {
+  for (const e in counts) {
+    if (!AUTO_VAL[e]) {
+      if (METALS.has(e)) return { error: `金属元素（${e}）をふくむので、分子ではなくイオンからできた物質（イオン結晶）や金属かもしれません。一覧の「結晶」も見てみましょう。` };
+      return { error: `${e}（${EL[e].n}）をふくむ分子は、自動組み立てに対応していません。` };
+    }
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (total > 40) return { error: '原子の数が多すぎるため、自動で組み立てられません（40個まで）。' };
+  const heavy = [], term = [];
+  for (const e of hillOrder(counts)) for (let k = 0; k < counts[e]; k++) (AUTO_VAL[e] > 1 ? heavy : term).push(e);
+  const rank = e => (e === 'C' ? 10 : AUTO_VAL[e]);
+  heavy.sort((a, b) => rank(b) - rank(a));
+  if (!heavy.length) {
+    if (term.length === 2) return { atoms: term.map(el => ({ el, charge: 0 })), bonds: [{ a: 0, b: 1, o: 1 }] };
+    return { error: 'この組み合わせでは、手の数が合う分子を組み立てられません。' };
+  }
+  const atoms = heavy.map(el => ({ el, charge: 0 }));
+  const cap = heavy.map(e => AUTO_VAL[e]);
+  const bonds = [];
+  let lastC = heavy[0] === 'C' ? 0 : -1;
+  for (let i = 1; i < heavy.length; i++) {
+    let p;
+    if (heavy[i] === 'C' && lastC >= 0) p = lastC;
+    else { p = 0; for (let k = 1; k < i; k++) if (cap[k] > cap[p]) p = k; }
+    if (cap[p] < 1) return { error: 'この分子式では、原子どうしをつなげられません。' };
+    bonds.push({ a: p, b: i, o: 1 }); cap[p]--; cap[i]--;
+    if (heavy[i] === 'C') lastC = i;
+  }
+  const free = cap.reduce((a, b) => a + b, 0) - term.length;
+  if (free < 0) return { error: '水素などの数が多すぎて、価標（手の数）が合いません。' };
+  if (free % 2) return { error: '価標（手の数）が合いません。余った手が1本残ってしまいます。' };
+  let U = free / 2, progress = true;
+  // C=O や C≡N のように、O・N との多重結合を先に考える
+  const hetero = b => (heavy[b.a] === 'O' || heavy[b.b] === 'O' ? 2 : heavy[b.a] === 'N' || heavy[b.b] === 'N' ? 1 : 0);
+  const order = bonds.slice().sort((x, y) => hetero(y) - hetero(x));
+  while (U > 0 && progress) {
+    progress = false;
+    for (const b of order) {
+      while (U > 0 && cap[b.a] > 0 && cap[b.b] > 0 && b.o < 3) { b.o++; cap[b.a]--; cap[b.b]--; U--; progress = true; }
+    }
+  }
+  if (U > 0) return { error: '二重結合・三重結合だけでは組み立てられません。環（リング）の形をした分子かもしれません（例: ベンゼン C6H6 は一覧から選べます）。' };
+  term.sort((a, b) => (a === 'H') - (b === 'H'));
+  for (const t of term) {
+    let p = -1;
+    for (let k = 0; k < heavy.length; k++) {
+      if (cap[k] <= 0) continue;
+      if (p < 0) { p = k; continue; }
+      const pref = x => (t !== 'H' && heavy[x] === 'C' ? 10 : 0) + cap[x];
+      if (pref(k) > pref(p)) p = k;
+    }
+    atoms.push({ el: t, charge: 0 });
+    bonds.push({ a: p, b: atoms.length - 1, o: 1 });
+    cap[p]--;
+  }
+  return { atoms, bonds };
+}
+
+// ===== 立体構造の計算（VSEPR：電子対どうしの反発） =====
+// 結合と非共有電子対を「おたがいに反発する風船」として扱い、最も離れる向きを探す。
+const LP_LEN = 0.55;  // 非共有電子対を置く距離（表示用）
+const LP_W = 1.24;    // 非共有電子対の反発の強さ（結合より強い）
+function bondLength(e1, e2, o) {
+  return (EL[e1].rc + EL[e2].rc) * (o === 2 ? 0.87 : o === 3 ? 0.78 : 1);
+}
+function findRing(n, nb) {
+  const parent = new Array(n).fill(-2);
+  for (let s = 0; s < n; s++) {
+    if (parent[s] !== -2) continue;
+    parent[s] = -1;
+    const st = [s];
+    while (st.length) {
+      const u = st.pop();
+      for (const { j } of nb[u]) {
+        if (j === parent[u]) continue;
+        if (parent[j] === -2) { parent[j] = u; st.push(j); }
+        else {
+          // u と j が別の道でつながった → 環を取り出す
+          const pu = [], pj = [];
+          for (let x = u; x !== -1; x = parent[x]) pu.push(x);
+          for (let x = j; x !== -1; x = parent[x]) pj.push(x);
+          const setJ = new Set(pj);
+          const lca = pu.find(x => setJ.has(x));
+          if (lca === undefined) continue;
+          const cyc = pu.slice(0, pu.indexOf(lca) + 1).concat(pj.slice(0, pj.indexOf(lca)).reverse());
+          if (cyc.length >= 3) return cyc;
+        }
+      }
+    }
+  }
+  return null;
+}
+function buildMolecule(def) {
+  const atoms = def.atoms.map(a => ({ el: a.el, charge: a.charge || 0 }));
+  const bonds = def.bonds.map(b => ({ a: b.a, b: b.b, o: b.o || 1 }));
+  const n = atoms.length;
+  const nb = atoms.map(() => []);
+  bonds.forEach((b, k) => { nb[b.a].push({ j: b.b, o: b.o, k }); nb[b.b].push({ j: b.a, o: b.o, k }); });
+  atoms.forEach((a, i) => {
+    const sum = nb[i].reduce((s, x) => s + x.o, 0);
+    a.lp = (a.el === 'H' || !nb[i].length) ? 0 : Math.max(0, Math.floor((EL[a.el].ve - a.charge - sum) / 2));
+  });
+  const rand = rng(n * 7919 + bonds.length * 31 + 7);
+  const runit = () => vnorm([rand() - 0.5, rand() - 0.5, rand() - 0.5]);
+  const P = new Array(n).fill(null);
+  const ring = findRing(n, nb);
+  let ringCenter = null;
+  if (ring) {
+    const k = ring.length, L = 1.45, R = L / (2 * Math.sin(Math.PI / k));
+    const ringSet = new Set(ring);
+    const flat = ring.some(i => nb[i].some(x => x.o > 1 && ringSet.has(x.j)));
+    ring.forEach((idx, t) => {
+      const a = 2 * Math.PI * t / k;
+      P[idx] = [R * Math.cos(a), R * Math.sin(a), flat ? (rand() - 0.5) * 0.02 : (t % 2 ? 0.25 : -0.25)];
+    });
+    ringCenter = [0, 0, 0];
+  } else {
+    let root = 0;
+    for (let i = 1; i < n; i++) if (nb[i].length > nb[root].length) root = i;
+    P[root] = [0, 0, 0];
+  }
+  const queue = P.map((p, i) => (p ? i : -1)).filter(i => i >= 0);
+  while (queue.length) {
+    const p = queue.shift();
+    for (const { j, o } of nb[p]) {
+      if (P[j]) continue;
+      let base = [0, 0, 0];
+      for (const { j: m } of nb[p]) if (P[m] && m !== j) base = vadd(base, vnorm(vsub(P[p], P[m])));
+      if (ringCenter && vlen(vsub(P[p], ringCenter)) > 0.1) base = vadd(base, vnorm(vsub(P[p], ringCenter)));
+      const jitter = ring && ring.includes(p) ? 0.15 : 0.9;
+      const dir = vlen(base) < 1e-6 ? runit() : vnorm(vadd(vnorm(base), vmul(runit(), jitter)));
+      P[j] = vadd(P[p], vmul(dir, bondLength(atoms[p].el, atoms[j].el, o)));
+      queue.push(j);
+    }
+  }
+  for (let i = 0; i < n; i++) if (!P[i]) P[i] = vmul(runit(), 2);
+
+  // 非共有電子対（ローンペア）
+  const lps = [];
+  atoms.forEach((a, c) => {
+    for (let k = 0; k < a.lp; k++) {
+      let base = [0, 0, 0];
+      for (const { j } of nb[c]) base = vsub(base, vnorm(vsub(P[j], P[c])));
+      const dir = vnorm(vadd(vlen(base) < 1e-6 ? [0, 0, 0] : vnorm(base), vmul(runit(), 0.8)));
+      lps.push({ owner: c, p: vadd(P[c], vmul(dir, LP_LEN)) });
+    }
+  });
+  // 中心原子ごとの「電子対の領域」
+  const domains = atoms.map((a, c) => {
+    const d = nb[c].map(({ j, o }) => ({ t: 'a', i: j, w: 1 }));
+    lps.forEach((l, k) => { if (l.owner === c) d.push({ t: 'l', i: k, w: LP_W }); });
+    return d;
+  });
+  const getP = d => (d.t === 'a' ? P[d.i] : lps[d.i].p);
+  // 原子どうしのつながりの距離（何本の結合でつながっているか）
+  const topo = atoms.map((_, s) => {
+    const dist = new Array(n).fill(99); dist[s] = 0;
+    const q = [s];
+    while (q.length) { const u = q.shift(); for (const { j } of nb[u]) if (dist[j] === 99) { dist[j] = dist[u] + 1; q.push(j); } }
+    return dist;
+  });
+  const farPairs = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (topo[i][j] >= 3) farPairs.push([i, j]);
+  // 二重結合と、その両どなりが平面三角形の原子どうしの結合（ベンゼンの環など）
+  const dbl = bonds.filter(b => b.o <= 2);
+
+  const ITER = n > 1 ? 2400 : 0;
+  for (let it = 0; it < ITER; it++) {
+    const FA = P.map(() => [0, 0, 0]), FL = lps.map(() => [0, 0, 0]);
+    const addF = (d, f) => { const T = d.t === 'a' ? FA : FL; T[d.i] = vadd(T[d.i], f); };
+    // 1) 電子対どうしの反発
+    for (let c = 0; c < n; c++) {
+      const D = domains[c];
+      if (D.length < 2) continue;
+      const vec = D.map(d => vsub(getP(d), P[c]));
+      const r = vec.map(vlen), u = vec.map(vnorm);
+      for (let i = 0; i < D.length; i++) for (let j = i + 1; j < D.length; j++) {
+        const d = vsub(u[i], u[j]), dl = vlen(d) + 1e-6;
+        const f = D[i].w * D[j].w / (dl * dl * dl);
+        for (const [k, s] of [[i, 1], [j, -1]]) {
+          let F = vmul(d, f * s);
+          F = vsub(F, vmul(u[k], vdot(F, u[k])));
+          F = vmul(F, 1 / Math.max(r[k], 0.3));
+          addF(D[k], F);
+          FA[c] = vsub(FA[c], F);
+        }
+      }
+    }
+    // 2) 二重結合のまわりはねじれない（平面を保つ）
+    for (const b of dbl) {
+      const A = b.a, B = b.b, L = vlen(vsub(P[B], P[A]));
+      if (domains[A].length !== 3 || domains[B].length !== 3) continue;
+      const axis = vsub(P[B], P[A]);
+      for (const x of domains[A]) {
+        if (x.t === 'a' && x.i === B) continue;
+        const px = getP(x), lx = vlen(vsub(px, P[A]));
+        for (const y of domains[B]) {
+          if (y.t === 'a' && y.i === A) continue;
+          const py = getP(y), ly = vlen(vsub(py, P[B]));
+          const X = [-lx / 2, lx * 0.866], Yc = [L + ly / 2, ly * 0.866], Yt = [L + ly / 2, -ly * 0.866];
+          const dc = Math.hypot(X[0] - Yc[0], X[1] - Yc[1]), dt = Math.hypot(X[0] - Yt[0], X[1] - Yt[1]);
+          const v = vsub(py, px), d = vlen(v);
+          // ねじれ角で「同じ側（シス）」か「反対側（トランス）」かを決める
+          const n1 = vcross(vsub(P[A], px), axis), n2 = vcross(axis, vsub(py, P[B]));
+          const target = vdot(n1, n2) >= 0 ? dc : dt;
+          const F = vmul(vnorm(v), 0.6 * (target - d));
+          addF(y, F); addF(x, vmul(F, -1));
+        }
+      }
+    }
+    // 3) 離れた原子どうしは少しだけ反発（ぶつからないように）
+    for (const [i, j] of farPairs) {
+      const v = vsub(P[j], P[i]), d = Math.max(vlen(v), 0.5);
+      if (d > 3.6) continue;
+      const F = vmul(vnorm(v), 0.04 * (1 / (d * d) - 1 / (3.6 * 3.6)));
+      FA[j] = vadd(FA[j], F); FA[i] = vsub(FA[i], F);
+    }
+    const step = 0.05 * (1 - it / ITER) + 0.004;
+    const move = (p, f) => { let s = vmul(f, step); const l = vlen(s); if (l > 0.08) s = vmul(s, 0.08 / l); return vadd(p, s); };
+    for (let i = 0; i < n; i++) P[i] = move(P[i], FA[i]);
+    lps.forEach((l, k) => { l.p = move(l.p, FL[k]); });
+    // 4) 結合の長さを正しい値にもどす
+    for (let pass = 0; pass < 4; pass++) {
+      for (const b of bonds) {
+        const v = vsub(P[b.b], P[b.a]), d = vlen(v) || 1e-6;
+        const L = bondLength(atoms[b.a].el, atoms[b.b].el, b.o);
+        const corr = vmul(v, (d - L) / d * 0.5);
+        P[b.a] = vadd(P[b.a], corr); P[b.b] = vsub(P[b.b], corr);
+      }
+    }
+    for (const l of lps) l.p = vadd(P[l.owner], vmul(vnorm(vsub(l.p, P[l.owner])), LP_LEN));
+  }
+  // ベンゼンのような平面の環は、最後に平面へぴったりそろえる
+  if (ring && ring.every(i => domains[i].length === 3)) {
+    const ringSet = new Set(ring), flatAtoms = new Set(ring);
+    ring.forEach(i => nb[i].forEach(({ j }) => flatAtoms.add(j)));
+    const { c, eig } = spread([...flatAtoms].map(i => P[i]));
+    const nrm = eig[2].vec;
+    const proj = p => vsub(p, vmul(nrm, vdot(vsub(p, c), nrm)));
+    flatAtoms.forEach(i => { P[i] = proj(P[i]); });
+    lps.forEach(l => { if (ringSet.has(l.owner)) l.p = proj(l.p); });
+  }
+  const mol = { atoms, bonds, nb, pos: P, lps };
+  orientMolecule(mol);
+  return mol;
+}
+
+// 3x3対称行列の固有ベクトル（ヤコビ法）
+function eigenSym3(A) {
+  const a = A.map(r => r.slice());
+  const V = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  for (let sweep = 0; sweep < 30; sweep++) {
+    for (const [p, q] of [[0, 1], [0, 2], [1, 2]]) {
+      if (Math.abs(a[p][q]) < 1e-12) continue;
+      const th = (a[q][q] - a[p][p]) / (2 * a[p][q]);
+      const t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1));
+      const c = 1 / Math.sqrt(t * t + 1), s = t * c;
+      for (let k = 0; k < 3; k++) {
+        const akp = a[k][p], akq = a[k][q];
+        a[k][p] = c * akp - s * akq; a[k][q] = s * akp + c * akq;
+      }
+      for (let k = 0; k < 3; k++) {
+        const apk = a[p][k], aqk = a[q][k];
+        a[p][k] = c * apk - s * aqk; a[q][k] = s * apk + c * aqk;
+      }
+      for (let k = 0; k < 3; k++) {
+        const vkp = V[k][p], vkq = V[k][q];
+        V[k][p] = c * vkp - s * vkq; V[k][q] = s * vkp + c * vkq;
+      }
+    }
+  }
+  const vals = [a[0][0], a[1][1], a[2][2]];
+  const vecs = [0, 1, 2].map(k => [V[0][k], V[1][k], V[2][k]]);
+  return [0, 1, 2].sort((x, y) => vals[y] - vals[x]).map(k => ({ val: vals[k], vec: vecs[k] }));
+}
+function spread(points) {
+  const n = points.length;
+  const c = points.reduce((s, p) => vadd(s, p), [0, 0, 0]).map(x => x / n);
+  const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  for (const p of points) { const d = vsub(p, c); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) C[i][j] += d[i] * d[j] / n; }
+  return { c, eig: eigenSym3(C) };
+}
+// いちばん広がる向きを横、次を縦にそろえて、見やすい向きにする
+function orientMolecule(mol) {
+  const { pos, lps, atoms, nb } = mol;
+  const { c, eig } = spread(pos);
+  let ex = eig[0].vec, ey = eig[1].vec;
+  let ez = vcross(ex, ey);
+  const heavyY = pos.reduce((s, p, i) => s + (atoms[i].el === 'H' ? 0 : EL[atoms[i].el].m) * vdot(vsub(p, c), ey), 0);
+  if (heavyY < -1e-6) { ey = vmul(ey, -1); ez = vmul(ez, -1); }
+  // 中心原子が1個の分子：非共有電子対を上に（なければ結合の1本を上に）向けて、形がわかる向きにする
+  const centers = atoms.map((_, i) => i).filter(i => nb[i].length >= 2);
+  if (centers.length === 1 && !(atoms.length >= 3 && eig[1].val < 0.01)) {
+    const k = centers[0];
+    let up = [0, 0, 0];
+    lps.forEach(l => { if (l.owner === k) up = vadd(up, vnorm(vsub(l.p, pos[k]))); });
+    if (vlen(up) < 0.2 && nb[k].length === 4) up = vsub(pos[nb[k][0].j], pos[k]);
+    if (vlen(up) > 0.2) {
+      ey = vnorm(up);
+      let side = vsub(ex, vmul(ey, vdot(ex, ey)));
+      if (vlen(side) < 0.2) side = vsub(ez, vmul(ey, vdot(ez, ey)));
+      ex = vnorm(side);
+      ez = vcross(ex, ey);
+    }
+  }
+  const tf = p => { const d = vsub(p, c); return [vdot(d, ex), vdot(d, ey), vdot(d, ez)]; };
+  mol.pos = pos.map(tf);
+  lps.forEach(l => { l.p = tf(l.p); });
+  mol.planar = pos.length >= 3 && eig[2].val < 0.01;
+  mol.linear = pos.length >= 2 && eig[1].val < 0.01;
+}
+
+// ===== 分子の性質を調べる（形・極性・電子対の数） =====
+function localShape(mol, c) {
+  const a = mol.atoms[c], nA = mol.nb[c].length, lp = a.lp;
+  if (nA < 2) return null;
+  const same = new Set(mol.nb[c].map(x => mol.atoms[x.j].el + x.o)).size === 1;
+  const key = nA + ',' + lp;
+  const table = {
+    '2,0': '直線形', '2,1': '折れ線形', '2,2': '折れ線形', '2,3': '直線形',
+    '3,0': same ? '正三角形' : '平面三角形', '3,1': '三角錐形',
+    '4,0': same ? '正四面体形' : '四面体形', '4,1': 'シーソー形', '4,2': '平面四角形',
+    '5,0': '三方両錐形', '6,0': '正八面体形',
+  };
+  return table[key] || null;
+}
+function analyze(mol) {
+  const { atoms, bonds, pos, nb } = mol;
+  const counts = countAtoms(atoms);
+  const charge = atoms.reduce((s, a) => s + a.charge, 0);
+  const pairs = bonds.reduce((s, b) => s + b.o, 0);
+  const lone = atoms.reduce((s, a) => s + a.lp, 0);
+  const centers = atoms.map((_, i) => i).filter(i => nb[i].length >= 2);
+  let shape, keyAngle = null;
+  if (atoms.length === 1) shape = '単原子';
+  else if (atoms.length === 2) shape = '直線形';
+  else if (centers.length === 1) {
+    const c = centers[0];
+    shape = localShape(mol, c) || '—';
+    const [x, y] = nb[c];
+    keyAngle = { c, a: x.j, b: y.j, deg: angleDeg(pos[c], pos[x.j], pos[y.j]) };
+  } else if (mol.linear) shape = '直線形';
+  else if (mol.planar) shape = '平面形';
+  else shape = '立体的';
+  if (!keyAngle && centers.length) {
+    const c = centers.find(i => atoms[i].el !== 'H') ?? centers[0];
+    const [x, y] = nb[c];
+    keyAngle = { c, a: x.j, b: y.j, deg: angleDeg(pos[c], pos[x.j], pos[y.j]) };
+  }
+  // 部分電荷 δ と、分子全体の極性（双極子）
+  const isCH = (b) => { const e = atoms[b.a].el + atoms[b.b].el; return e === 'CH' || e === 'HC'; };
+  const delta = atoms.map(a => a.charge * 0.8);
+  let mu = [0, 0, 0], polarBonds = 0;
+  for (const b of bonds) {
+    if (isCH(b)) continue;
+    const d = EL[atoms[b.b].el].en - EL[atoms[b.a].el].en;
+    if (Math.abs(d) < 0.05) continue;
+    polarBonds++;
+    delta[b.a] += d; delta[b.b] -= d;
+    mu = vadd(mu, vmul(vnorm(vsub(pos[b.b], pos[b.a])), d));
+  }
+  atoms.forEach((a, i) => { if (a.charge) mu = vsub(mu, vmul(pos[i], a.charge * 0.5)); });
+  const muLen = vlen(mu);
+  let polarity, polarNote;
+  if (charge !== 0) { polarity = 'イオン'; polarNote = '電荷をもつイオンなので、極性分子・無極性分子には分類しません。'; }
+  else if (atoms.length === 1) { polarity = '無極性'; polarNote = '原子1個なので、かたよりはありません。'; }
+  else if (muLen > 0.1) {
+    polarity = '極性分子';
+    polarNote = '結合の極性（電子のかたより）が、分子の形のせいで打ち消し合わずに残っています。';
+  } else {
+    polarity = '無極性分子';
+    polarNote = polarBonds ? '一つ一つの結合には極性がありますが、対称な形なので分子全体では打ち消し合っています。'
+      : '電気陰性度の差がほとんどない結合だけでできているので、電子のかたよりがありません。';
+  }
+  return { counts, charge, pairs, lone, shape, keyAngle, delta, mu, muLen, polarity, polarNote, mass: massOf(counts) };
+}
+/*ENGINE-END*/
+</script>
+<script>
+// ===== 分子の一覧（授業で使う代表的なもの） =====
+// smiles: 原子のつながり方。結晶は crystal で作り方を指定する。
+const CATS = [
+  { id: 'elem', name: '単体' },
+  { id: 'basic', name: '身近な分子' },
+  { id: 'organic', name: '有機化合物' },
+  { id: 'ion', name: '酸・イオン' },
+  { id: 'crystal', name: '結晶' },
+];
+const LIB = [
+  // --- 単体 ---
+  { id: 'hydrogen', cat: 'elem', name: '水素', en: 'hydrogen', smiles: '[H][H]', bond: '共有結合（単結合）',
+    desc: '無色・無臭で、すべての気体の中で最も軽い。燃えると水だけができるので、燃料電池などのクリーンな燃料として注目されている。',
+    props: [['沸点', '−253 ℃'], ['特徴', '最も軽い気体']],
+    point: '2個のH原子が価電子を1個ずつ出し合い、1組の共有電子対をつくる。いちばん単純な共有結合の例。' },
+  { id: 'nitrogen', cat: 'elem', name: '窒素', en: 'nitrogen', smiles: 'N#N', bond: '共有結合（三重結合）',
+    desc: '空気の体積の約78%をしめる。三重結合がとても強いので反応しにくく、食品の袋に詰めて酸化を防ぐのに使われる。',
+    props: [['沸点', '−196 ℃'], ['空気中の割合', '約78%（体積）']],
+    point: '共有電子対3組の三重結合。それぞれのN原子に非共有電子対が1組ずつ残る。' },
+  { id: 'oxygen', cat: 'elem', name: '酸素', en: 'oxygen', smiles: 'O=O', bond: '共有結合（二重結合）',
+    desc: '空気の体積の約21%。ものが燃えるのを助け、生物の呼吸に欠かせない。',
+    props: [['沸点', '−183 ℃'], ['空気中の割合', '約21%（体積）']],
+    point: '共有電子対2組の二重結合。それぞれのO原子に非共有電子対が2組ずつある。' },
+  { id: 'ozone', f: 'O3', cat: 'elem', name: 'オゾン', en: 'ozone', smiles: 'O=[O+][O-]', bond: '共有結合',
+    desc: '淡青色で特有のにおいがある気体。酸化力が強く、殺菌や脱臭に使われる。上空のオゾン層は、太陽からの有害な紫外線を吸収している。',
+    props: [['沸点', '−112 ℃'], ['結合角', '約117°']],
+    point: '酸素 O₂ の同素体（同じ元素からできた、性質のちがう単体）。中央のO原子に非共有電子対があるので折れ線形。実際の2本のO–O結合は同じ長さで、単結合と二重結合の中間の状態になっている。' },
+  { id: 'chlorine', cat: 'elem', name: '塩素', en: 'chlorine', smiles: 'ClCl', bond: '共有結合（単結合）',
+    desc: '黄緑色で刺激臭のある有毒な気体。水道水の殺菌や、漂白剤の原料に使われる。',
+    props: [['沸点', '−34 ℃'], ['色', '黄緑色']],
+    point: '共有電子対1組。それぞれのCl原子に非共有電子対が3組ずつある。' },
+
+  // --- 身近な分子 ---
+  { id: 'water', f: 'H2O', cat: 'basic', name: '水', en: 'water', smiles: 'O', bond: '共有結合',
+    desc: '生命に欠かせない物質。分子量18と小さいのに、沸点が100 ℃と高い。これは分子どうしが水素結合で強く引き合っているため。氷が水に浮くのも、水素結合でできるすき間の多い構造のため。',
+    props: [['沸点', '100 ℃'], ['融点', '0 ℃'], ['結合角', '104.5°']],
+    point: 'O原子の非共有電子対2組が結合を押すので、折れ線形になる。O–H結合の極性が打ち消し合わないので、水は極性分子。' },
+  { id: 'ammonia', f: 'NH3', cat: 'basic', name: 'アンモニア', en: 'ammonia', smiles: 'N', bond: '共有結合',
+    desc: '刺激臭のある無色の気体。水に非常によく溶け、水溶液は弱い塩基性を示す。肥料の原料として大量につくられている（ハーバー・ボッシュ法）。',
+    props: [['沸点', '−33 ℃'], ['結合角', '約107°']],
+    point: 'N原子の上に非共有電子対が1組あるので、三角錐形。極性分子。この非共有電子対にH⁺が配位結合すると、アンモニウムイオン NH₄⁺ になる。' },
+  { id: 'methane', cat: 'basic', name: 'メタン', en: 'methane', smiles: 'C', bond: '共有結合',
+    desc: '天然ガスや都市ガスの主成分。無色・無臭で、よく燃える。',
+    props: [['沸点', '−161 ℃'], ['結合角', '109.5°']],
+    point: '4組の共有電子対がおたがいに反発して最も離れた向きをとり、正四面体形になる。形が対称なので無極性分子。' },
+  { id: 'co2', cat: 'basic', name: '二酸化炭素', en: 'carbon dioxide', smiles: 'O=C=O', bond: '共有結合（二重結合）',
+    desc: '無色・無臭の気体。固体はドライアイスで、−78.5 ℃で昇華する。水に少し溶けて弱い酸性を示す（炭酸水）。温室効果ガスの一つ。',
+    props: [['昇華点', '−78.5 ℃'], ['結合角', '180°']],
+    point: 'C=O結合には極性があるが、直線形で左右反対向きに打ち消し合うので、分子全体では無極性分子。「極性分子かどうかは形で決まる」代表例。' },
+  { id: 'hcl', f: 'HCl', cat: 'basic', name: '塩化水素', en: 'hydrogen chloride', smiles: 'Cl', bond: '共有結合',
+    desc: '刺激臭のある無色の気体。水に溶けたものが塩酸で、強い酸性を示す。胃液にも含まれる。',
+    props: [['沸点', '−85 ℃'], ['水溶液', '塩酸（強酸）']],
+    point: 'ClのほうがHより電気陰性度が大きいので、共有電子対はCl側にかたよる（Hがδ+、Clがδ−）。二原子分子の極性分子。' },
+  { id: 'hf', f: 'HF', cat: 'basic', name: 'フッ化水素', en: 'hydrogen fluoride', smiles: 'F', bond: '共有結合',
+    desc: '水溶液はフッ化水素酸で、ガラスを溶かすので、くもりガラスの加工などに使われる。分子量が小さいのに沸点が高い。',
+    props: [['沸点', '20 ℃']],
+    point: 'Fは電気陰性度が最も大きい元素。HF分子どうしは水素結合で強く引き合うので、ほかのハロゲン化水素より沸点がずっと高い。' },
+  { id: 'h2s', f: 'H2S', cat: 'basic', name: '硫化水素', en: 'hydrogen sulfide', smiles: 'S', bond: '共有結合',
+    desc: '腐った卵のようなにおい（腐卵臭）がする有毒な気体。火山ガスや温泉に含まれる。',
+    props: [['沸点', '−60 ℃'], ['結合角（実測）', '約92°']],
+    point: '水と同じ折れ線形の極性分子（実際の結合角は約92°で、このモデルの値より小さい）。水素結合をつくらないので、分子量が水より大きいのに沸点はずっと低い。' },
+  { id: 'ccl4', cat: 'basic', name: '四塩化炭素', en: 'carbon tetrachloride', smiles: 'ClC(Cl)(Cl)Cl', bond: '共有結合',
+    desc: '無色の液体。かつては溶媒や消火剤に使われたが、毒性やオゾン層破壊のため、今は使用が制限されている。',
+    props: [['沸点', '77 ℃']],
+    point: 'C–Cl結合には極性があるが、正四面体形で打ち消し合うので無極性分子。クロロホルムと見比べてみよう。' },
+  { id: 'chcl3', cat: 'basic', name: 'クロロホルム', en: 'chloroform', smiles: 'ClC(Cl)Cl', bond: '共有結合',
+    desc: '甘いにおいのある無色の液体。溶媒として使われる。かつては麻酔薬にも使われた。',
+    props: [['沸点', '61 ℃']],
+    point: '四面体形だが、HとClがまざっているので結合の極性が打ち消し合わず、極性分子。四塩化炭素とのちがいに注目。' },
+  { id: 'h2o2', f: 'H2O2', cat: 'basic', name: '過酸化水素', en: 'hydrogen peroxide', smiles: 'OO', bond: '共有結合',
+    desc: '約3%の水溶液はオキシドールとよばれ、消毒薬に使われる。酸化マンガン(IV)を加えると分解して酸素が発生する。',
+    props: [['沸点', '150 ℃'], ['消毒薬', 'オキシドール（約3%）']],
+    point: 'O–O単結合をもつ。2本のO–H結合は同じ平面になく、ねじれた形をしている。' },
+  { id: 'so2', f: 'SO2', cat: 'basic', name: '二酸化硫黄', en: 'sulfur dioxide', smiles: 'O=S=O', bond: '共有結合',
+    desc: '刺激臭のある有毒な気体。石炭や石油を燃やすと発生し、酸性雨の原因になる。漂白剤や、ワインの酸化防止剤にも使われる。',
+    props: [['沸点', '−10 ℃'], ['結合角', '約119°']],
+    point: 'S原子に非共有電子対が1組あるので折れ線形になり、極性分子。直線形の CO₂ と形を比べてみよう。' },
+  { id: 'co', f: 'CO', cat: 'basic', name: '一酸化炭素', en: 'carbon monoxide', smiles: '[C-]#[O+]', bond: '共有結合（三重結合）',
+    desc: '無色・無臭で非常に有毒な気体。炭素をふくむ物質が不完全燃焼すると発生する。血液中のヘモグロビンと強く結びつき、酸素を運べなくする。',
+    props: [['沸点', '−192 ℃']],
+    point: 'CとOの間は三重結合で、そのうち1組はO原子の非共有電子対が配位結合したものとみなせる。' },
+
+  // --- 有機化合物 ---
+  { id: 'ethane', cat: 'organic', name: 'エタン', en: 'ethane', smiles: 'CC', rational: 'CH3CH3', bond: '共有結合',
+    desc: '天然ガスに少しふくまれる、無色・無臭の気体。',
+    props: [['沸点', '−89 ℃']],
+    point: 'C–C単結合を軸にして、両側の CH₃ がくるくる回転できる。それぞれのCのまわりは正四面体形。' },
+  { id: 'ethylene', cat: 'organic', name: 'エチレン', en: 'ethylene (ethene)', smiles: 'C=C', rational: 'CH2=CH2', bond: '共有結合（二重結合）',
+    desc: 'わずかに甘いにおいのある無色の気体。果実の成熟をうながす植物ホルモン。ポリエチレンの原料。',
+    props: [['沸点', '−104 ℃'], ['結合角', '約120°']],
+    point: 'C=C二重結合は回転できないので、6個の原子がすべて同じ平面にある。' },
+  { id: 'acetylene', cat: 'organic', name: 'アセチレン', en: 'acetylene (ethyne)', smiles: 'C#C', rational: 'CH≡CH', bond: '共有結合（三重結合）',
+    desc: '燃やすと約3000 ℃の高温の炎が得られ、金属の溶接や切断に使われる。炭化カルシウム（カーバイド）に水を加えると発生する。',
+    props: [['結合角', '180°']],
+    point: 'C≡C三重結合をもち、4個の原子が一直線に並ぶ直線形。' },
+  { id: 'propane', cat: 'organic', name: 'プロパン', en: 'propane', smiles: 'CCC', rational: 'CH3CH2CH3', bond: '共有結合',
+    desc: 'LPガス（液化石油ガス）の主成分。家庭用のガスボンベなどに使われる。',
+    props: [['沸点', '−42 ℃']],
+    point: '炭素が3個つながった鎖。炭素の鎖は一直線ではなく、約109.5°でジグザグに折れ曲がっている。' },
+  { id: 'butane', cat: 'organic', name: 'ブタン', en: 'butane', smiles: 'CCCC', rational: 'CH3(CH2)2CH3', bond: '共有結合',
+    desc: 'ライターやカセットボンベの燃料。少し圧力をかけるだけで液体になる。',
+    props: [['沸点', '−0.5 ℃']],
+    point: '分子式 C₄H₁₀ には、まっすぐな鎖のブタンと、枝分かれした2-メチルプロパンの2種類がある（構造異性体）。' },
+  { id: 'isobutane', cat: 'organic', name: '2-メチルプロパン', en: '2-methylpropane (isobutane)', smiles: 'CC(C)C', rational: '(CH3)3CH', bond: '共有結合',
+    alias: ['イソブタン'],
+    desc: 'ブタンの構造異性体。イソブタンともいう。冷蔵庫の冷媒やスプレーのガスに使われる。',
+    props: [['沸点', '−12 ℃']],
+    point: 'ブタンと同じ C₄H₁₀ だが枝分かれしている。枝分かれすると分子どうしがふれ合う面積が小さくなり、沸点が低くなる。' },
+  { id: 'methanol', cat: 'organic', name: 'メタノール', en: 'methanol', smiles: 'CO', rational: 'CH3OH', bond: '共有結合',
+    desc: '無色の液体で、燃料や工業原料に使われる。毒性が強く、飲むと失明や死亡の危険がある。',
+    props: [['沸点', '65 ℃']],
+    point: 'ヒドロキシ基 –OH をもつアルコール。–OH どうしが水素結合するので、分子量が同じくらいの炭化水素より沸点が高い。' },
+  { id: 'ethanol', cat: 'organic', name: 'エタノール', en: 'ethanol', smiles: 'CCO', rational: 'C2H5OH', bond: '共有結合',
+    desc: 'お酒にふくまれるアルコール。消毒用アルコールにも使われる。水とよく混ざる。',
+    props: [['沸点', '78 ℃']],
+    point: 'ジメチルエーテルと分子式（C₂H₆O）が同じ構造異性体。–OH どうしの水素結合があるので、沸点がずっと高い。' },
+  { id: 'dme', cat: 'organic', name: 'ジメチルエーテル', en: 'dimethyl ether', smiles: 'COC', rational: 'CH3OCH3', bond: '共有結合',
+    desc: 'スプレーのガスや、軽油の代わりの燃料として使われる気体。',
+    props: [['沸点', '−24 ℃']],
+    point: 'エタノールの構造異性体。O原子にHがついていないので水素結合をつくれず、エタノールより沸点がずっと低い。' },
+  { id: 'formaldehyde', cat: 'organic', name: 'ホルムアルデヒド', en: 'formaldehyde', smiles: 'C=O', rational: 'HCHO', bond: '共有結合',
+    desc: '刺激臭のある気体。水溶液（ホルマリン）は生物標本の保存に使われる。シックハウス症候群の原因物質の一つ。',
+    props: [['沸点', '−19 ℃']],
+    point: 'C=O（カルボニル基）をもつ。4個の原子が同じ平面にある平面三角形。' },
+  { id: 'acetic', cat: 'organic', name: '酢酸', en: 'acetic acid', smiles: 'CC(=O)O', rational: 'CH3COOH', bond: '共有結合',
+    desc: '食酢のすっぱさのもと（食酢には約3〜5%ふくまれる）。純粋な酢酸は冬に凍るので、氷酢酸とよばれる。',
+    props: [['沸点', '118 ℃'], ['融点', '17 ℃']],
+    point: 'カルボキシ基 –COOH をもつカルボン酸。水溶液は弱い酸性を示す（弱酸）。' },
+  { id: 'benzene', cat: 'organic', name: 'ベンゼン', en: 'benzene', smiles: 'C1=CC=CC=C1', bond: '共有結合',
+    desc: '特有のにおいのある無色の液体。プラスチックや医薬品など、多くの化学製品の原料。毒性がある。',
+    props: [['沸点', '80 ℃'], ['結合角', '120°']],
+    point: '6個のCが正六角形に並ぶ平面分子。単結合と二重結合を交互に描くが、実際は炭素どうしの結合はすべて同じ長さ（中間の状態）になっている。' },
+  { id: 'cyclohexane', cat: 'organic', name: 'シクロヘキサン', en: 'cyclohexane', smiles: 'C1CCCCC1', bond: '共有結合',
+    desc: '無色の液体。ナイロンの原料や溶媒に使われる。',
+    props: [['沸点', '81 ℃']],
+    point: 'ベンゼンと同じ6個の環だが、すべて単結合。各Cのまわりが正四面体形なので平面にならず、「いす形」に折れ曲がる。ベンゼンと見比べてみよう。' },
+  { id: 'urea', cat: 'organic', name: '尿素', en: 'urea', smiles: 'NC(N)=O', rational: 'CO(NH2)2', bond: '共有結合',
+    desc: 'ほ乳類の尿にふくまれる。窒素肥料や保湿クリームに使われる。無機物から初めて合成された有機化合物として有名（1828年、ウェーラー）。',
+    props: [['融点', '133 ℃']],
+    point: '–NH₂ が2つと C=O をもつ。' },
+
+  // --- 酸・イオン ---
+  { id: 'h2so4', f: 'H2SO4', cat: 'ion', name: '硫酸', en: 'sulfuric acid', smiles: 'OS(=O)(=O)O', bond: '共有結合',
+    desc: '無色でねばりけのある液体。濃硫酸には脱水作用や吸湿性がある。うすめた希硫酸は強い酸性を示す。',
+    props: [['沸点', '約340 ℃'], ['酸の強さ', '2価の強酸']],
+    point: '中心のS原子に、4個のO原子が四面体形に結合している。水溶液中では H⁺ を2個出して硫酸イオン SO₄²⁻ になる。' },
+  { id: 'hno3', f: 'HNO3', cat: 'ion', name: '硝酸', en: 'nitric acid', smiles: 'O[N+](=O)[O-]', bond: '共有結合',
+    desc: '無色の液体で、強い酸性と酸化力をもつ。光で分解しやすいので、褐色のびんに入れて保存する。',
+    props: [['沸点', '83 ℃'], ['酸の強さ', '1価の強酸']],
+    point: 'N原子のまわりは平面三角形。水溶液中では H⁺ を出して硝酸イオン NO₃⁻ になる。' },
+  { id: 'nh4', f: 'NH4+', cat: 'ion', name: 'アンモニウムイオン', en: 'ammonium ion', smiles: '[NH4+]', bond: '共有結合・配位結合',
+    desc: 'アンモニアがH⁺を受け取ってできる1価の陽イオン。塩化アンモニウムや、肥料の硫酸アンモニウムなどにふくまれる。',
+    props: [['電荷', '+1'], ['結合角', '109.5°']],
+    point: 'アンモニアの非共有電子対にH⁺が配位結合してできる。できたあとの4本のN–H結合は区別できず、正四面体形。アンモニア（三角錐形）と比べてみよう。' },
+  { id: 'h3o', f: 'H3O+', cat: 'ion', name: 'オキソニウムイオン', en: 'oxonium ion', smiles: '[OH3+]', bond: '共有結合・配位結合',
+    desc: '水分子がH⁺を受け取ってできる陽イオン。酸の水溶液の中にあり、酸性を示すもとになる。',
+    props: [['電荷', '+1']],
+    point: '水の非共有電子対にH⁺が配位結合してできる。非共有電子対が1組残るので三角錐形。' },
+  { id: 'oh', f: 'OH-', cat: 'ion', name: '水酸化物イオン', en: 'hydroxide ion', smiles: '[OH-]', bond: '共有結合',
+    desc: '塩基の水溶液にふくまれる1価の陰イオン。塩基性を示すもとになる。',
+    props: [['電荷', '−1']],
+    point: 'O原子に非共有電子対が3組ある。H⁺ と結びつくと水になる（中和）。' },
+  { id: 'co3', f: 'CO32-', cat: 'ion', name: '炭酸イオン', en: 'carbonate ion', smiles: '[O-]C([O-])=O', bond: '共有結合',
+    desc: '炭酸カルシウム（石灰石・大理石・貝がら）などにふくまれる2価の陰イオン。',
+    props: [['電荷', '−2']],
+    point: '平面三角形。実際には3本のC–O結合は同じ長さ（単結合と二重結合の中間）。' },
+  { id: 'so4', f: 'SO42-', cat: 'ion', name: '硫酸イオン', en: 'sulfate ion', smiles: '[O-]S(=O)(=O)[O-]', bond: '共有結合',
+    desc: '硫酸や硫酸銅(II)などにふくまれる2価の陰イオン。',
+    props: [['電荷', '−2']],
+    point: '正四面体形。実際には4本のS–O結合は同じ長さになっている。' },
+  { id: 'no3', f: 'NO3-', cat: 'ion', name: '硝酸イオン', en: 'nitrate ion', smiles: '[O-][N+](=O)[O-]', bond: '共有結合',
+    desc: '硝酸や硝酸カリウムなどにふくまれる1価の陰イオン。',
+    props: [['電荷', '−1']],
+    point: '平面三角形。実際には3本のN–O結合は同じ長さになっている。' },
+
+  // --- 結晶 ---
+  { id: 'nacl', cat: 'crystal', name: '塩化ナトリウム', en: 'sodium chloride', crystal: 'nacl', formula: 'NaCl', bond: 'イオン結合',
+    kind: 'イオン結晶', lattice: '塩化ナトリウム型', coord: '6', perCell: 'Na⁺ 4個・Cl⁻ 4個',
+    desc: '食塩の主成分。Na⁺ と Cl⁻ がクーロン力で引き合い、交互に並んだイオン結晶。かたいが、強い力を加えると割れやすい。固体は電気を通さないが、水溶液や融解液は電気を通す。',
+    props: [['融点', '801 ℃'], ['配位数', '6'], ['単位格子中', 'Na⁺ 4個・Cl⁻ 4個']],
+    point: '1個のNa⁺のまわりを6個のCl⁻がとりかこむ（配位数6）。「空間充填」にすると、大きいCl⁻のすき間に小さいNa⁺が入っているのがわかる。' },
+  { id: 'diamond', cat: 'crystal', name: 'ダイヤモンド', en: 'diamond', crystal: 'diamond', formula: 'C', bond: '共有結合',
+    kind: '共有結合の結晶', lattice: 'ダイヤモンド型', coord: '4', perCell: '8個',
+    desc: '天然で最もかたい物質。すべての価電子が共有結合に使われているので、電気を通さない。宝石のほか、研磨剤やカッターに使われる。',
+    props: [['融点', '約3550 ℃'], ['配位数', '4'], ['単位格子中の原子', '8個']],
+    point: '各C原子が4個のC原子と正四面体形に共有結合し、立体的な網目をつくる。黒鉛とは同素体。' },
+  { id: 'graphite', cat: 'crystal', name: '黒鉛（グラファイト）', en: 'graphite', crystal: 'graphite', formula: 'C', bond: '共有結合＋分子間力',
+    kind: '共有結合の結晶', lattice: '層状構造', coord: '3',
+    desc: '鉛筆のしんや電池の電極に使われる。やわらかく、うすくはがれやすい。電気をよく通す。',
+    props: [['層の間かく', '0.335 nm'], ['炭素間の距離', '0.142 nm']],
+    point: '各C原子が3個のC原子と結合して正六角形の平面の層をつくり、層どうしは弱い分子間力で重なっている。結合に使われない価電子が層にそって動けるので、電気を通す。ダイヤモンドとは同素体。' },
+  { id: 'copper', cat: 'crystal', name: '銅', en: 'copper', crystal: 'fcc', formula: 'Cu', bond: '金属結合',
+    kind: '金属結晶', lattice: '面心立方格子', coord: '12', perCell: '4個',
+    desc: '赤みがかった金属。電気や熱をよく通すので、電線や調理器具に使われる。',
+    props: [['融点', '1085 ℃'], ['配位数', '12'], ['単位格子中の原子', '4個']],
+    point: '立方体の頂点と、各面の中心に原子がある。自由電子が全体を動き回り、原子どうしを結びつけている（金属結合）。' },
+  { id: 'iron', cat: 'crystal', name: '鉄', en: 'iron', crystal: 'bcc', formula: 'Fe', bond: '金属結合',
+    kind: '金属結晶', lattice: '体心立方格子', coord: '8', perCell: '2個',
+    desc: '最も多く使われている金属。建物、自動車、道具など。',
+    props: [['融点', '1538 ℃'], ['配位数', '8'], ['単位格子中の原子', '2個']],
+    point: '立方体の頂点と中心に原子がある。中心の原子は8個の原子と接している（配位数8）。面心立方格子の銅と比べてみよう。' },
+  { id: 'dryice', cat: 'crystal', name: 'ドライアイス', en: 'dry ice', crystal: 'dryice', formula: 'CO2', bond: '共有結合＋分子間力',
+    kind: '分子結晶', lattice: '面心立方格子（分子が並ぶ）', perCell: '4分子',
+    desc: '二酸化炭素の固体。−78.5 ℃で、液体にならずに直接気体になる（昇華）。保冷剤に使われる。',
+    props: [['昇華点', '−78.5 ℃'], ['単位格子中の分子', '4個']],
+    point: 'CO₂分子が弱い分子間力で規則正しく並んだ分子結晶。分子の中は共有結合、分子どうしは分子間力。分子間力が弱いので昇華しやすい。' },
+];
+const ALT_NAMES = { ethylene: ['エテン'], acetylene: ['エチン'], graphite: ['グラファイト'], dryice: ['二酸化炭素の固体'], hcl: ['塩酸'] };
+
+// ===== 結晶の組み立て =====
+function buildCrystal(kind) {
+  const atoms = [], pos = [], bonds = [];
+  const add = (el, charge, p, rb, rs) => { atoms.push({ el, charge, lp: 0, rb, rs }); pos.push(p); return atoms.length - 1; };
+  const linkByDistance = (d, o = 1, style) => {
+    for (let i = 0; i < pos.length; i++) for (let j = i + 1; j < pos.length; j++) {
+      if (Math.abs(vlen(vsub(pos[i], pos[j])) - d) < 0.06) bonds.push({ a: i, b: j, o, style });
+    }
+  };
+  const FCC = [];
+  for (const x of [0, 1]) for (const y of [0, 1]) for (const z of [0, 1]) FCC.push([x, y, z]);
+  FCC.push([0.5, 0.5, 0], [0.5, 0.5, 1], [0.5, 0, 0.5], [0.5, 1, 0.5], [0, 0.5, 0.5], [1, 0.5, 0.5]);
+  const toPos = (f, a) => f.map(v => (v - 0.5) * a);
+  let cell = null;
+  if (kind === 'nacl') {
+    const a = 5.64; cell = a;
+    for (let i = 0; i <= 2; i++) for (let j = 0; j <= 2; j++) for (let k = 0; k <= 2; k++) {
+      const p = [(i - 1) * a / 2, (j - 1) * a / 2, (k - 1) * a / 2];
+      if ((i + j + k) % 2) add('Na', 1, p, 0.42, 1.02); else add('Cl', -1, p, 0.72, 1.81);
+    }
+    linkByDistance(a / 2, 1, 'contact');
+  } else if (kind === 'diamond') {
+    const a = 3.567; cell = a;
+    FCC.forEach(f => add('C', 0, toPos(f, a), 0.38, 0.77));
+    [[0.25, 0.25, 0.25], [0.75, 0.75, 0.25], [0.75, 0.25, 0.75], [0.25, 0.75, 0.75]].forEach(f => add('C', 0, toPos(f, a), 0.38, 0.77));
+    linkByDistance(a * Math.sqrt(3) / 4);
+  } else if (kind === 'fcc') {
+    const a = 3.61; cell = a;
+    FCC.forEach(f => add('Cu', 0, toPos(f, a), 0.5, 1.28));
+  } else if (kind === 'bcc') {
+    const a = 2.87; cell = a;
+    for (const x of [0, 1]) for (const y of [0, 1]) for (const z of [0, 1]) add('Fe', 0, toPos([x, y, z], a), 0.5, 1.24);
+    add('Fe', 0, [0, 0, 0], 0.5, 1.24);
+  } else if (kind === 'graphite') {
+    const a = 2.46, gap = 3.35, s3 = Math.sqrt(3);
+    const cx = a, cz = a / s3;
+    const shift = [a / 2, a * s3 / 6];
+    [-1, 0, 1].forEach(layer => {
+      const off = layer === 0 ? shift : [0, 0];
+      for (let i = -4; i <= 5; i++) for (let j = -4; j <= 5; j++) {
+        for (const b of [[0, 0], shift]) {
+          const x = i * a + j * a / 2 + b[0] + off[0], z = j * a * s3 / 2 + b[1] + off[1];
+          if (Math.hypot(x - cx, z - cz) <= 3.9) add('C', 0, [x - cx, layer * gap, z - cz], 0.34, 1.7);
+        }
+      }
+    });
+    linkByDistance(a / s3);
+  } else if (kind === 'dryice') {
+    const a = 5.62; cell = a;
+    const dirOf = f => {
+      const m = f.map(v => (v % 1 + 1) % 1);
+      const key = m.map(v => (v ? 'h' : '0')).join('');
+      return vnorm({ '000': [1, 1, 1], '0hh': [1, -1, -1], 'h0h': [-1, 1, -1], 'hh0': [-1, -1, 1] }[key]);
+    };
+    FCC.forEach(f => {
+      const c = toPos(f, a), u = dirOf(f);
+      const ci = add('C', 0, c, 0.3, 1.7);
+      const o1 = add('O', 0, vadd(c, vmul(u, 1.16)), 0.3, 1.52);
+      const o2 = add('O', 0, vsub(c, vmul(u, 1.16)), 0.3, 1.52);
+      bonds.push({ a: ci, b: o1, o: 2 }, { a: ci, b: o2, o: 2 });
+    });
+  }
+  const nb = atoms.map(() => []);
+  bonds.forEach((b, k) => { nb[b.a].push({ j: b.b, o: b.o, k }); nb[b.b].push({ j: b.a, o: b.o, k }); });
+  return { atoms, bonds, nb, pos, lps: [], cell, crystal: true };
+}
+
+// ===== 一覧の下ごしらえ =====
+LIB.forEach(e => {
+  if (e.smiles) {
+    e.def = parseSmiles(e.smiles);
+    e.counts = countAtoms(e.def.atoms);
+    e.charge = e.def.atoms.reduce((s, a) => s + a.charge, 0);
+  } else {
+    e.counts = parseBody(e.formula);
+    e.charge = 0;
+  }
+  e.key = formulaKey(e.counts, e.charge);
+});
+function getModel(e) {
+  if (!e.model) {
+    e.model = e.crystal ? buildCrystal(e.crystal) : buildMolecule(e.def);
+    e.an = e.crystal ? { counts: e.counts, charge: 0, mass: massOf(e.counts), delta: e.model.atoms.map(() => 0), mu: [0, 0, 0], muLen: 0 } : analyze(e.model);
+  }
+  return e;
+}
+
+// ===== 表示用の文字づくり =====
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function formulaHTML(str) {
+  let body = str, charge = '';
+  const m = str.match(/^(.*?)(\d?[+-])$/);
+  if (m && m[1]) { body = m[1]; charge = m[2]; }
+  const html = esc(body).replace(/(\d+)/g, '<sub>$1</sub>');
+  return html + (charge ? '<sup>' + charge.replace('-', '−') + '</sup>' : '');
+}
+function displayFormula(e) {
+  if (e.crystal) return e.formula;
+  return e.f || hillString(e.counts, e.charge);
+}
+const fmtMass = m => (Number.isInteger(m) ? String(m) : m.toFixed(1));
+const chargeSup = c => (!c ? '' : (Math.abs(c) > 1 ? Math.abs(c) : '') + (c > 0 ? '+' : '−'));
+
+// ===== 画面の状態 =====
+const PREF_KEY = 'molecule-lab:prefs';
+const state = {
+  entry: null, mode: 'ball', selected: -1,
+  show: { labels: true, lp: true, angle: false, polar: false, rotate: true, vib: false },
+  cat: 'basic',
+};
+try {
+  const saved = JSON.parse(localStorage.getItem(PREF_KEY) || 'null');
+  if (saved) { Object.assign(state.show, saved.show || {}); if (saved.mode) state.mode = saved.mode; }
+} catch (e) { /* 保存できない環境でも動く */ }
+function savePrefs() {
+  try { localStorage.setItem(PREF_KEY, JSON.stringify({ show: state.show, mode: state.mode })); } catch (e) { /* 無視 */ }
+}
+const $ = id => document.getElementById(id);
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ===== 3D表示（three.js） =====
+let R = null;
+const view = { atoms: [], bonds: [], lps: [], labels: [], arcs: [], extras: [], halo: null, base: [], cur: [], vib: [], grow: 1, growStart: 0 };
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function initThree() {
+  if (!window.THREE || !THREE.OrbitControls) return false;
+  try {
+    UP = new THREE.Vector3(0, 1, 0); tmpV = new THREE.Vector3(); tmpW = new THREE.Vector3();
+    const stage = $('stage');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    stage.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
+    scene.add(camera);
+    const key = new THREE.DirectionalLight(0xffffff, 0.75); key.position.set(3, 4, 5); camera.add(key);
+    const rim = new THREE.DirectionalLight(0xffffff, 0.25); rim.position.set(-4, -2, 2); camera.add(rim);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a8, 0.5));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = 0.09;
+    controls.rotateSpeed = 0.8; controls.autoRotateSpeed = 1.4;
+    controls.minDistance = 2; controls.maxDistance = 120;
+    const group = new THREE.Group(); scene.add(group);
+    R = {
+      renderer, scene, camera, controls, group,
+      SPHERE: new THREE.SphereGeometry(1, 40, 28),
+      CYL: new THREE.CylinderGeometry(1, 1, 1, 20, 1, false),
+      CONE: new THREE.ConeGeometry(1, 1, 24),
+      ray: new THREE.Raycaster(),
+    };
+    const resize = () => {
+      const w = stage.clientWidth, h = stage.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+    };
+    new ResizeObserver(resize).observe(stage);
+    resize();
+    bindPicking();
+    controls.addEventListener('start', () => $('hint').classList.add('gone'));
+    requestAnimationFrame(loop);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function phong(color, extra) {
+  return new THREE.MeshPhongMaterial(Object.assign({ color, shininess: 70, specular: 0x2b2b2b }, extra || {}));
+}
+function clearView() {
+  const g = R.group;
+  while (g.children.length) {
+    const o = g.children.pop();
+    o.traverse(x => { if (x.material) x.material.dispose(); if (x.geometry && x.geometry !== R.SPHERE && x.geometry !== R.CYL && x.geometry !== R.CONE) x.geometry.dispose(); });
+  }
+  $('labels').innerHTML = '';
+  Object.assign(view, { atoms: [], bonds: [], lps: [], labels: [], arcs: [], extras: [], halo: null, base: [], cur: [], vib: [] });
+}
+
+let UP, tmpV, tmpW;  // three.js を読み込んだあとで作る
+function placeCyl(mesh, a, b, r) {
+  tmpV.subVectors(b, a);
+  const L = tmpV.length();
+  mesh.position.copy(a).addScaledVector(tmpV, 0.5);
+  mesh.scale.set(r, Math.max(L, 1e-4), r);
+  if (L > 1e-6) mesh.quaternion.setFromUnitVectors(UP, tmpV.normalize());
+}
+function atomRadius(i) {
+  const a = state.entry.model.atoms[i];
+  const e = EL[a.el];
+  const hasBond = state.entry.model.nb[i].length > 0;
+  if (state.mode === 'space') return a.rs || e.rv;
+  if (state.mode === 'stick') return hasBond ? 0.15 : (a.rb || 0.3) * 0.7;
+  return a.rb || e.rc * 0.42 + 0.13;
+}
+function deltaColor(d) {
+  const t = Math.max(-1, Math.min(1, d / 1.6));
+  const neutral = new THREE.Color('#dfe3ea');
+  if (t >= 0) return neutral.clone().lerp(new THREE.Color('#2f6bff'), t);
+  return neutral.clone().lerp(new THREE.Color('#ff3b2f'), -t);
+}
+
+function buildView() {
+  clearView();
+  const e = state.entry, m = e.model, an = e.an;
+  const g = R.group;
+  view.base = m.pos.map(p => new THREE.Vector3(p[0], p[1], p[2]));
+  view.cur = view.base.map(v => v.clone());
+  const rnd = rng(m.atoms.length * 13 + 5);
+  view.vib = m.atoms.map(a => {
+    const amp = (a.el === 'H' ? 0.09 : 0.05) * (m.crystal ? 1.5 : 1);
+    return { amp, w: [0, 1, 2].map(() => 5 + rnd() * 6), ph: [0, 1, 2].map(() => rnd() * 6.28) };
+  });
+  // 原子
+  m.atoms.forEach((a, i) => {
+    const mesh = new THREE.Mesh(R.SPHERE, phong(EL[a.el].c));
+    mesh.userData.atom = i;
+    g.add(mesh);
+    view.atoms.push(mesh);
+  });
+  // 結合
+  m.bonds.forEach(b => {
+    const parts = [];
+    const lines = b.style === 'contact' ? 1 : b.o;
+    for (let k = 0; k < lines; k++) {
+      if (b.style === 'contact') {
+        const mesh = new THREE.Mesh(R.CYL, phong('#9aa3b2', { transparent: true, opacity: 0.8 }));
+        g.add(mesh); parts.push([mesh]);
+      } else {
+        const m1 = new THREE.Mesh(R.CYL, phong(EL[m.atoms[b.a].el].c));
+        const m2 = new THREE.Mesh(R.CYL, phong(EL[m.atoms[b.b].el].c));
+        g.add(m1); g.add(m2); parts.push([m1, m2]);
+      }
+    }
+    view.bonds.push({ b, parts });
+  });
+  // 非共有電子対（紫のふくらみ＋電子2個）
+  const lpColor = cssVar('--lp') || '#8a6cf0';
+  m.lps.forEach(l => {
+    const grp = new THREE.Group();
+    const lobe = new THREE.Mesh(R.SPHERE, new THREE.MeshPhongMaterial({ color: lpColor, transparent: true, opacity: 0.32, depthWrite: false, shininess: 30 }));
+    lobe.scale.set(0.2, 0.34, 0.2);
+    const d1 = new THREE.Mesh(R.SPHERE, phong('#5b3fd0')); d1.scale.setScalar(0.055); d1.position.set(0.075, 0.05, 0);
+    const d2 = new THREE.Mesh(R.SPHERE, phong('#5b3fd0')); d2.scale.setScalar(0.055); d2.position.set(-0.075, 0.05, 0);
+    grp.add(lobe, d1, d2);
+    g.add(grp);
+    view.lps.push({ l, grp, dir: new THREE.Vector3() });
+  });
+  // 単位格子の箱
+  if (m.cell) {
+    const box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(m.cell, m.cell, m.cell)),
+      new THREE.LineBasicMaterial({ color: cssVar('--muted') || '#5a6577', transparent: true, opacity: 0.7 }));
+    g.add(box); view.extras.push(box);
+  }
+  // 選んだ原子のふち
+  view.halo = new THREE.Mesh(R.SPHERE, new THREE.MeshBasicMaterial({ color: cssVar('--warm') || '#d9661f', side: THREE.BackSide, transparent: true, opacity: 0.9 }));
+  view.halo.visible = false;
+  g.add(view.halo);
+  // 分子全体の極性の矢印
+  buildDipole();
+  // ラベル
+  const layer = $('labels');
+  m.atoms.forEach((a, i) => {
+    const el = document.createElement('div');
+    el.className = 'lbl lbl-atom';
+    if (m.atoms.length > 40) el.style.fontSize = '11px';
+    layer.appendChild(el);
+    view.labels.push({ el, kind: 'atom', i });
+  });
+  applyLook();
+  fitCamera();
+  view.growStart = performance.now();
+  view.grow = reduceMotion ? 1 : 0;
+}
+
+function buildDipole() {
+  const e = state.entry, an = e.an;
+  view.dipole = null;
+  if (e.crystal || an.charge !== 0 || an.polarity !== '極性分子') return;
+  const dir = new THREE.Vector3(an.mu[0], an.mu[1], an.mu[2]).normalize();
+  const len = Math.max(1.4, Math.min(3, an.muLen * 1.6));
+  const color = cssVar('--warm') || '#d9661f';
+  const mat = () => new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 });
+  const grp = new THREE.Group();
+  const shaft = new THREE.Mesh(R.CYL, mat()); shaft.scale.set(0.045, len, 0.045); shaft.position.y = 0;
+  const head = new THREE.Mesh(R.CONE, mat()); head.scale.set(0.15, 0.36, 0.15); head.position.y = len / 2 + 0.16;
+  const cross = new THREE.Mesh(R.CYL, mat()); cross.scale.set(0.04, 0.34, 0.04); cross.rotation.z = Math.PI / 2; cross.position.y = -len / 2 + 0.22;
+  grp.add(shaft, head, cross);
+  grp.quaternion.setFromUnitVectors(UP, dir);
+  grp.renderOrder = 20;
+  grp.traverse(o => { o.renderOrder = 20; });
+  R.group.add(grp);
+  const el = document.createElement('div');
+  el.className = 'lbl lbl-mu';
+  el.textContent = '電子がかたよる向き';
+  $('labels').appendChild(el);
+  view.dipole = { grp, el, tip: dir.clone().multiplyScalar(len / 2 + 0.55) };
+}
+
+// 表示モード・トグルの反映
+function applyLook() {
+  const e = state.entry, m = e.model, an = e.an;
+  m.atoms.forEach((a, i) => {
+    const mesh = view.atoms[i];
+    mesh.scale.setScalar(atomRadius(i));
+    mesh.material.color.set(state.show.polar && !e.crystal ? deltaColor(an.delta[i]) : EL[a.el].c);
+  });
+  view.bonds.forEach(({ b, parts }) => {
+    const visible = state.mode !== 'space';
+    parts.forEach(p => p.forEach((mesh, k) => {
+      mesh.visible = visible;
+      if (p.length === 2) mesh.material.color.set(state.show.polar && !e.crystal ? '#c4cad4' : EL[m.atoms[k ? b.b : b.a].el].c);
+    }));
+  });
+  const lpOn = state.show.lp && state.mode !== 'space';
+  view.lps.forEach(v => { v.grp.visible = lpOn; });
+  if (view.dipole) { view.dipole.grp.visible = state.show.polar; view.dipole.el.hidden = !state.show.polar; }
+  // ラベルの文字
+  view.labels.forEach(L => {
+    if (L.kind !== 'atom') return;
+    const a = m.atoms[L.i];
+    let html = esc(a.el);
+    if (a.charge) html += '<sup>' + chargeSup(a.charge) + '</sup>';
+    if (state.show.polar && !e.crystal) {
+      const d = an.delta[L.i];
+      if (d < -0.3) html += '<sup>δ−</sup>'; else if (d > 0.3) html += '<sup>δ+</sup>';
+    }
+    L.el.innerHTML = html;
+    L.el.hidden = !state.show.labels;
+  });
+  rebuildArcs();
+  R.controls.autoRotate = state.show.rotate;
+  updatePositions(performance.now() / 1000);
+}
+
+// 結合角の弧とラベル
+function rebuildArcs() {
+  view.arcs.forEach(a => { R.group.remove(a.line); a.line.geometry.dispose(); a.line.material.dispose(); a.el.remove(); });
+  view.arcs = [];
+  const m = state.entry.model;
+  if (m.crystal && state.selected < 0) return;
+  const want = [];
+  if (state.show.angle && !m.crystal) {
+    m.atoms.forEach((a, c) => {
+      if (want.length >= 8 || a.el === 'H' || m.nb[c].length < 2) return;
+      want.push([c, m.nb[c][0].j, m.nb[c][1].j]);
+    });
+  }
+  if (state.selected >= 0) {
+    const c = state.selected, nb = m.nb[c];
+    let n = 0;
+    for (let i = 0; i < nb.length && n < 6; i++) for (let j = i + 1; j < nb.length && n < 6; j++) {
+      if (!want.some(w => w[0] === c && ((w[1] === nb[i].j && w[2] === nb[j].j) || (w[1] === nb[j].j && w[2] === nb[i].j)))) want.push([c, nb[i].j, nb[j].j]);
+      n++;
+    }
+  }
+  const color = cssVar('--accent') || '#2753d6';
+  want.forEach(([c, a, b]) => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(25 * 3), 3));
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true }));
+    line.renderOrder = 15;
+    R.group.add(line);
+    const el = document.createElement('div');
+    el.className = 'lbl lbl-angle';
+    $('labels').appendChild(el);
+    view.arcs.push({ c, a, b, line, el, mid: new THREE.Vector3() });
+  });
+}
+
+function updatePositions(t) {
+  const m = state.entry.model;
+  const vibOn = state.show.vib;
+  view.base.forEach((b, i) => {
+    const c = view.cur[i];
+    c.copy(b);
+    if (vibOn) {
+      const v = view.vib[i];
+      c.x += v.amp * Math.sin(v.w[0] * t + v.ph[0]);
+      c.y += v.amp * Math.sin(v.w[1] * t + v.ph[1]);
+      c.z += v.amp * Math.sin(v.w[2] * t + v.ph[2]);
+    }
+    view.atoms[i].position.copy(c);
+  });
+  // 結合
+  const stick = state.mode === 'stick';
+  view.bonds.forEach(({ b, parts }) => {
+    if (state.mode === 'space') return;
+    const A = view.cur[b.a], B = view.cur[b.b];
+    if (b.style === 'contact') { placeCyl(parts[0][0], A, B, 0.035); return; }
+    const n = parts.length;
+    const r = n === 1 ? (stick ? 0.15 : 0.1) : (stick ? 0.085 : 0.062);
+    const gap = stick ? 0.2 : 0.16;
+    const dir = tmpW.subVectors(B, A).clone().normalize();
+    let perp = null;
+    const ref = m.nb[b.a].find(x => x.j !== b.b) || m.nb[b.b].find(x => x.j !== b.a);
+    if (ref && n > 1) {
+      const v = new THREE.Vector3().subVectors(view.cur[ref.j], A);
+      const normal = new THREE.Vector3().crossVectors(dir, v);
+      if (normal.lengthSq() > 1e-6) perp = new THREE.Vector3().crossVectors(normal, dir).normalize();
+    }
+    if (!perp) {
+      perp = new THREE.Vector3().crossVectors(dir, Math.abs(dir.y) < 0.9 ? UP : new THREE.Vector3(1, 0, 0)).normalize();
+    }
+    const mid = new THREE.Vector3().addVectors(A, B).multiplyScalar(0.5);
+    parts.forEach((p, k) => {
+      const off = perp.clone().multiplyScalar((k - (n - 1) / 2) * gap);
+      const a1 = A.clone().add(off), m1 = mid.clone().add(off), b1 = B.clone().add(off);
+      placeCyl(p[0], a1, m1, r);
+      placeCyl(p[1], m1, b1, r);
+    });
+  });
+  // 非共有電子対
+  view.lps.forEach(v => {
+    const o = v.l.owner;
+    const basePos = new THREE.Vector3(v.l.p[0], v.l.p[1], v.l.p[2]);
+    v.dir.subVectors(basePos, view.base[o]).normalize();
+    const rr = atomRadius(o);
+    v.grp.position.copy(view.cur[o]).addScaledVector(v.dir, rr + 0.2);
+    v.grp.quaternion.setFromUnitVectors(UP, v.dir);
+  });
+  // 選んだ原子
+  if (state.selected >= 0 && view.halo) {
+    view.halo.visible = true;
+    view.halo.position.copy(view.cur[state.selected]);
+    view.halo.scale.setScalar(atomRadius(state.selected) * 1.18 + 0.05);
+  } else if (view.halo) view.halo.visible = false;
+  // 結合角
+  view.arcs.forEach(arc => {
+    const C = view.cur[arc.c], A = view.cur[arc.a], B = view.cur[arc.b];
+    const u = new THREE.Vector3().subVectors(A, C).normalize(), w = new THREE.Vector3().subVectors(B, C).normalize();
+    const ang = Math.acos(Math.max(-1, Math.min(1, u.dot(w))));
+    const rad = state.mode === 'space' ? atomRadius(arc.c) + 0.3 : Math.max(0.55, atomRadius(arc.c) + 0.2);
+    const arr = arc.line.geometry.attributes.position.array;
+    let axis = new THREE.Vector3().crossVectors(u, w);
+    if (axis.lengthSq() < 1e-8) axis = new THREE.Vector3().crossVectors(u, Math.abs(u.y) < 0.9 ? UP : new THREE.Vector3(1, 0, 0));
+    axis.normalize();
+    for (let k = 0; k < 25; k++) {
+      const q = new THREE.Quaternion().setFromAxisAngle(axis, ang * k / 24);
+      const p = u.clone().applyQuaternion(q).multiplyScalar(rad).add(C);
+      arr[k * 3] = p.x; arr[k * 3 + 1] = p.y; arr[k * 3 + 2] = p.z;
+    }
+    arc.line.geometry.attributes.position.needsUpdate = true;
+    const bis = new THREE.Quaternion().setFromAxisAngle(axis, ang / 2);
+    arc.mid.copy(u).applyQuaternion(bis).multiplyScalar(rad + 0.38).add(C);
+    arc.el.textContent = (ang * 180 / Math.PI).toFixed(1) + '°';
+  });
+}
+
+function fitCamera() {
+  const m = state.entry.model;
+  let r = 0;
+  m.pos.forEach((p, i) => { r = Math.max(r, vlen(p) + (m.crystal ? 1.2 : 1.0)); });
+  if (m.cell) r = Math.max(r, m.cell * 0.87);
+  r = Math.max(r, 1.6);
+  const cam = R.camera;
+  // 縦と横のうち、せまい方の視野に分子がおさまる距離
+  const halfV = cam.fov * Math.PI / 360;
+  const halfH = Math.atan(Math.tan(halfV) * cam.aspect);
+  const fit = r / Math.sin(Math.min(halfV, halfH)) * 1.05;
+  const dir = m.crystal ? new THREE.Vector3(0.75, 0.5, 1) : new THREE.Vector3(0.28, 0.22, 1);
+  cam.position.copy(dir.normalize().multiplyScalar(fit));
+  R.controls.target.set(0, 0, 0);
+  R.controls.update();
+}
+
+function project(v, w, h) {
+  tmpV.copy(v).applyMatrix4(R.group.matrixWorld).project(R.camera);
+  return { x: (tmpV.x + 1) / 2 * w, y: (1 - tmpV.y) / 2 * h, z: tmpV.z };
+}
+function updateLabels() {
+  const stage = $('stage');
+  const w = stage.clientWidth, h = stage.clientHeight;
+  const put = (el, v) => {
+    const p = project(v, w, h);
+    if (p.z > 1) { el.style.visibility = 'hidden'; return; }
+    el.style.visibility = '';
+    el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, -50%)`;
+  };
+  // 手前の原子にかくれた原子のラベルは出さない
+  const camPos = R.camera.position;
+  view.labels.forEach(L => {
+    if (L.el.hidden) return;
+    put(L.el, view.cur[L.i]);
+    const target = view.atoms[L.i].position;
+    tmpW.subVectors(target, camPos);
+    const dist = tmpW.length();
+    R.ray.set(camPos, tmpW.normalize());
+    R.ray.far = dist;
+    const hit = R.ray.intersectObjects(view.atoms, false)[0];
+    if (hit && hit.object !== view.atoms[L.i] && hit.distance < dist - atomRadius(L.i) * 0.9) L.el.style.visibility = 'hidden';
+  });
+  R.ray.far = Infinity;
+  view.arcs.forEach(a => put(a.el, a.mid));
+  if (view.dipole && !view.dipole.el.hidden) put(view.dipole.el, view.dipole.tip);
+}
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (!state.entry) return;
+  const t = now / 1000;
+  if (view.grow < 1) {
+    view.grow = Math.min(1, (now - view.growStart) / 450);
+    const s = 0.75 + 0.25 * (1 - Math.pow(1 - view.grow, 3));
+    R.group.scale.setScalar(s);
+  } else R.group.scale.setScalar(1);
+  if (state.show.vib) updatePositions(t);
+  R.controls.update();
+  R.renderer.render(R.scene, R.camera);
+  updateLabels();
+}
+
+// 原子をクリック／タップして選ぶ
+function bindPicking() {
+  const el = R.renderer.domElement;
+  let down = null;
+  el.addEventListener('pointerdown', ev => { down = { x: ev.clientX, y: ev.clientY }; });
+  el.addEventListener('pointerup', ev => {
+    if (!down || Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > 6) { down = null; return; }
+    down = null;
+    const rect = el.getBoundingClientRect();
+    const ndc = new THREE.Vector2((ev.clientX - rect.left) / rect.width * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1);
+    R.ray.setFromCamera(ndc, R.camera);
+    const hit = R.ray.intersectObjects(view.atoms, false)[0];
+    selectAtom(hit ? hit.object.userData.atom : -1);
+  });
+}
+function selectAtom(i) {
+  state.selected = (i === state.selected) ? -1 : i;
+  rebuildArcs();
+  updatePositions(performance.now() / 1000);
+  renderAtomChip();
+  renderInfo();
+}
+
+// ===== 画面（HTML）の組み立て =====
+function renderTabs() {
+  $('tabs').innerHTML = CATS.map(c => `<button type="button" class="tab" role="tab" data-cat="${c.id}" aria-selected="${c.id === state.cat}">${c.name}</button>`).join('');
+}
+function renderGrid() {
+  const items = LIB.filter(e => e.cat === state.cat);
+  $('grid').innerHTML = items.map(e => `<button type="button" class="card" data-id="${e.id}" aria-current="${state.entry && state.entry.id === e.id}">
+      <span class="f">${formulaHTML(e.rational || displayFormula(e))}</span><span class="n">${esc(e.name)}</span></button>`).join('');
+}
+
+function elementLegend(m) {
+  const seen = [];
+  m.atoms.forEach(a => { if (!seen.includes(a.el)) seen.push(a.el); });
+  return seen.map(el => `<span><i class="dot" style="background:${EL[el].c}"></i>${el} ${EL[el].n}</span>`).join('');
+}
+function massLine(an, label) {
+  const parts = an.mass.parts.map(p => `${p.e} ${fmtMass(p.m)}×${p.n}`).join(' + ');
+  return `${label}の計算：${parts} = <b>${fmtMass(an.mass.total)}</b>`;
+}
+function fact(label, value, cls) {
+  return `<div class="fact ${cls || ''}"><dt>${label}</dt><dd>${value}</dd></div>`;
+}
+
+function renderInfo() {
+  const e = state.entry;
+  if (!e) return;
+  const m = e.model, an = e.an;
+  let html = '';
+  if (state.selected >= 0) html += atomCardHTML(state.selected);
+  const cat = e.auto ? '分子式から組み立て' : (CATS.find(c => c.id === e.cat) || {}).name;
+  html += `<div class="eyebrow"><span class="pill">${esc(cat)}</span>${e.bond ? `<span class="pill">${esc(e.bond)}</span>` : ''}</div>`;
+  html += `<h2 class="mol-name">${esc(e.name)}</h2>`;
+  html += `<div class="mol-formula">${formulaHTML(displayFormula(e))}${e.rational ? `<small>示性式 ${formulaHTML(e.rational)}</small>` : ''}</div>`;
+  if (e.en) html += `<div class="mol-en">${esc(e.en)}</div>`;
+  html += '<dl class="facts">';
+  if (e.crystal) {
+    html += fact(e.kind === '分子結晶' ? '分子量' : '式量', fmtMass(an.mass.total));
+    html += fact('結晶の種類', esc(e.kind));
+    html += fact('並び方', esc(e.lattice));
+    if (e.coord) html += fact('配位数', esc(e.coord));
+    if (e.perCell) html += fact('単位格子中', esc(e.perCell));
+  } else {
+    html += fact(an.charge ? '式量' : '分子量', fmtMass(an.mass.total));
+    html += fact('形', esc(an.shape));
+    html += fact('極性', esc(an.polarity), an.polarity === '極性分子' ? 'polar' : an.polarity === '無極性分子' ? 'nonpolar' : '');
+    if (an.keyAngle && m.atoms.length >= 3) {
+      const k = an.keyAngle;
+      html += fact(`結合角 ${m.atoms[k.a].el}–${m.atoms[k.c].el}–${m.atoms[k.b].el}`, k.deg.toFixed(1) + '<span class="u">°</span>');
+    }
+    html += fact('共有電子対', an.pairs + '<span class="u">組</span>');
+    html += fact('非共有電子対', an.lone + '<span class="u">組</span>');
+  }
+  html += '</dl>';
+  html += `<div class="calc">${massLine(an, e.crystal ? (e.kind === '分子結晶' ? '分子量' : '式量') : (an.charge ? '式量' : '分子量'))}</div>`;
+  if (!e.crystal && an.polarNote) html += `<p class="note">${esc(an.polarNote)}</p>`;
+  if (state.show.polar && !e.crystal) {
+    html += '<p class="note">極性の表示：<b style="color:#e8402f">赤</b>は電子が集まる側（δ−）、<b style="color:#2f6bff">青</b>は電子が少ない側（δ+）。オレンジの矢印は、分子全体で電子がかたよる向き。</p>';
+  }
+  if (e.desc) html += `<h3 class="sec-h">性質・使われ方</h3><p class="desc">${esc(e.desc)}</p>`;
+  if (e.props && e.props.length) html += `<table class="props">${e.props.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>`;
+  if (e.point) html += `<div class="point"><h3>授業のポイント</h3><p>${esc(e.point)}</p></div>`;
+  const iso = LIB.filter(x => x.key === e.key && x.id !== e.id && !x.crystal && !e.crystal);
+  if (iso.length) html += `<h3 class="sec-h">同じ分子式の物質（異性体）</h3><div class="chips">${iso.map(x => `<button type="button" data-go="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
+  const allo = e.crystal ? LIB.filter(x => x.crystal && x.formula === e.formula && x.id !== e.id) : [];
+  if (allo.length) html += `<h3 class="sec-h">同じ元素の単体（同素体）</h3><div class="chips">${allo.map(x => `<button type="button" data-go="${x.id}">${esc(x.name)}</button>`).join('')}</div>`;
+  html += `<h3 class="sec-h">原子の色</h3><div class="legend">${elementLegend(m)}${m.lps.length ? `<span><i class="dot" style="background:${cssVar('--lp')};opacity:.6"></i>非共有電子対</span>` : ''}</div>`;
+  $('info').innerHTML = html;
+}
+
+function atomCardHTML(i) {
+  const e = state.entry, m = e.model, a = m.atoms[i], d = EL[a.el];
+  const nbs = m.nb[i];
+  const bondHands = nbs.reduce((s, x) => s + x.o, 0);
+  let html = `<div class="atom-card"><h3><b>${esc(a.el)}${a.charge ? '<sup>' + chargeSup(a.charge) + '</sup>' : ''}</b>${esc(d.n)}の原子</h3><dl class="facts">`;
+  html += fact('原子番号', d.z);
+  html += fact('原子量', fmtMass(d.m));
+  if (!METALS.has(a.el)) html += fact('価電子', d.ve + '<span class="u">個</span>');
+  if (d.en) html += fact('電気陰性度', d.en.toFixed(2));
+  if (!e.crystal) {
+    html += fact('結合の数（価標）', bondHands + '<span class="u">本</span>');
+    html += fact('非共有電子対', a.lp + '<span class="u">組</span>');
+    const shape = localShape(m, i);
+    if (shape) html += fact('この原子のまわりの形', esc(shape));
+  } else if (nbs.length) {
+    html += fact('となりの粒子', nbs.length + '<span class="u">個</span>');
+  }
+  html += '</dl>';
+  if (nbs.length >= 2) {
+    const items = [];
+    for (let x = 0; x < nbs.length && items.length < 6; x++) for (let y = x + 1; y < nbs.length && items.length < 6; y++) {
+      items.push(`<li>${esc(m.atoms[nbs[x].j].el)}–${esc(a.el)}–${esc(m.atoms[nbs[y].j].el)}　${angleDeg(m.pos[i], m.pos[nbs[x].j], m.pos[nbs[y].j]).toFixed(1)}°</li>`);
+    }
+    html += `<div class="note" style="margin:0">この原子での結合角</div><ul>${items.join('')}</ul>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderAtomChip() {
+  const chip = $('atomChip');
+  const i = state.selected;
+  if (i < 0) { chip.hidden = true; return; }
+  const m = state.entry.model, a = m.atoms[i];
+  const hands = m.nb[i].reduce((s, x) => s + x.o, 0);
+  const extra = state.entry.crystal ? `となり ${m.nb[i].length}個` : `結合 ${hands}本・非共有電子対 ${a.lp}組`;
+  chip.innerHTML = `<b>${esc(a.el)}${a.charge ? '<sup>' + chargeSup(a.charge) + '</sup>' : ''}</b><span>${esc(EL[a.el].n)}　${extra}</span><button type="button" aria-label="選択をやめる" data-unselect>×</button>`;
+  chip.hidden = false;
+}
+
+function selectEntry(e, opts) {
+  state.entry = getModel(e);
+  state.selected = -1;
+  if (!e.auto && e.cat !== state.cat) { state.cat = e.cat; renderTabs(); }
+  renderGrid();
+  renderAtomChip();
+  if (R) buildView();
+  renderInfo();
+  if (!e.auto) { try { history.replaceState(null, '', '#' + e.id); } catch (err) { /* 無視 */ } }
+  if (opts && opts.scroll && window.innerWidth <= 1180) $('stageWrap').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+}
+
+// ===== 検索（分子式・名前） =====
+function search(q) {
+  const out = [];
+  const s = q.trim();
+  if (!s) return out;
+  const low = s.toLowerCase();
+  const cands = parseFormulaInput(s);
+  const seen = new Set();
+  cands.forEach(c => {
+    LIB.filter(e => e.key === formulaKey(c.counts, c.charge)).forEach(e => { if (!seen.has(e.id)) { seen.add(e.id); out.push({ t: 'lib', e, why: '分子式が一致' }); } });
+  });
+  LIB.forEach(e => {
+    if (seen.has(e.id)) return;
+    const names = [e.name, e.en, ...(e.alias || []), ...(ALT_NAMES[e.id] || [])].filter(Boolean);
+    if (names.some(n => n.toLowerCase().includes(low)) || (e.rational && e.rational.toLowerCase() === low.replace(/\s/g, ''))) {
+      seen.add(e.id); out.push({ t: 'lib', e, why: '名前' });
+    }
+  });
+  if (cands.length) {
+    const c = cands[0];
+    const libHit = out.some(r => r.why === '分子式が一致');
+    if (!libHit) {
+      const mass = massOf(c.counts);
+      if (c.charge) out.push({ t: 'msg', text: `${hillString(c.counts, c.charge)}：イオンの自動組み立てには対応していません（式量 ${fmtMass(mass.total)}）。` });
+      else {
+        const built = autoBuild(c.counts);
+        if (built.error) out.push({ t: 'msg', text: `${hillString(c.counts, 0)}（分子量 ${fmtMass(mass.total)}）：${built.error}` });
+        else out.push({ t: 'auto', counts: c.counts, built });
+      }
+    }
+  }
+  if (!out.length) out.push({ t: 'msg', text: '見つかりませんでした。元素記号は大文字・小文字を区別します（例: Cl, Na）。' });
+  return out;
+}
+let lastResults = [];
+function renderResults() {
+  const q = $('q').value;
+  const list = $('results');
+  lastResults = search(q);
+  if (!q.trim()) { list.hidden = true; list.innerHTML = ''; return; }
+  list.innerHTML = lastResults.slice(0, 8).map((r, k) => {
+    if (r.t === 'lib') return `<li><button type="button" data-r="${k}"><span class="r-f">${formulaHTML(displayFormula(r.e))}</span><span class="r-n">${esc(r.e.name)}</span><span class="r-tag">${r.why}</span></button></li>`;
+    if (r.t === 'auto') return `<li><button type="button" class="r-auto" data-r="${k}"><span class="r-f">${formulaHTML(hillString(r.counts, 0))}</span><span class="r-n">分子式から立体を組み立てる</span><span class="r-tag">自動</span></button></li>`;
+    return `<li><div><span class="r-msg">${esc(r.text)}</span></div></li>`;
+  }).join('');
+  list.hidden = false;
+}
+function openResult(r) {
+  if (!r) return;
+  if (r.t === 'lib') selectEntry(r.e, { scroll: true });
+  else if (r.t === 'auto') {
+    const f = hillString(r.counts, 0);
+    const e = {
+      id: 'auto-' + f, auto: true, name: f + ' の分子', counts: r.counts, charge: 0, key: formulaKey(r.counts, 0),
+      def: r.built, bond: '共有結合',
+      desc: '入力した分子式から、それぞれの原子の価標（手の数：H 1本、O 2本、N 3本、C 4本）がちょうど満たされるように自動で組み立てた構造です。',
+      point: '同じ分子式でも、原子のつながり方がちがう別の物質（構造異性体）がありえます。ここに出ているのはその一例です。',
+    };
+    const known = LIB.filter(x => x.key === e.key);
+    if (known.length) e.point += ' 一覧には ' + known.map(x => x.name).join('・') + ' があります。';
+    selectEntry(e, { scroll: true });
+  } else return;
+  $('results').hidden = true;
+}
+
+// ===== イベント =====
+function bindUI() {
+  $('tabs').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-cat]');
+    if (!b) return;
+    state.cat = b.dataset.cat; renderTabs(); renderGrid();
+  });
+  $('grid').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-id]');
+    if (b) selectEntry(LIB.find(e => e.id === b.dataset.id), { scroll: true });
+  });
+  $('info').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-go]');
+    if (b) selectEntry(LIB.find(e => e.id === b.dataset.go));
+  });
+  $('atomChip').addEventListener('click', ev => { if (ev.target.closest('[data-unselect]')) selectAtom(state.selected); });
+  $('q').addEventListener('input', renderResults);
+  $('q').addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); openResult(lastResults.find(r => r.t !== 'msg')); }
+    if (ev.key === 'Escape') { $('results').hidden = true; }
+  });
+  $('results').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-r]');
+    if (b) openResult(lastResults[+b.dataset.r]);
+  });
+  $('modes').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-mode]');
+    if (!b) return;
+    state.mode = b.dataset.mode; syncControls(); savePrefs();
+    if (R && state.entry) applyLook();
+  });
+  $('toggles').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-k]');
+    if (!b) return;
+    const k = b.dataset.k;
+    state.show[k] = !state.show[k]; syncControls(); savePrefs();
+    if (R && state.entry) { applyLook(); renderInfo(); }
+  });
+  $('btnReset').addEventListener('click', () => { if (R && state.entry) fitCamera(); });
+  $('btnFull').addEventListener('click', () => {
+    const w = $('stageWrap');
+    const done = () => setTimeout(() => R && state.entry && fitCamera(), 120);
+    if (document.fullscreenElement) { document.exitFullscreen().then(done).catch(() => {}); return; }
+    if (w.requestFullscreen) w.requestFullscreen().then(done).catch(() => { w.classList.toggle('is-max'); done(); });
+    else { w.classList.toggle('is-max'); done(); }
+  });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && $('stageWrap').classList.contains('is-max')) { $('stageWrap').classList.remove('is-max'); }
+  });
+  // テーマ（明るい／暗い）が変わったら色を作り直す
+  const rebuild = () => { if (R && state.entry) { const sel = state.selected; buildView(); state.selected = sel; applyLook(); renderInfo(); } };
+  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rebuild);
+  new MutationObserver(rebuild).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+function syncControls() {
+  document.querySelectorAll('#modes [data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === state.mode)));
+  document.querySelectorAll('#toggles [data-k]').forEach(b => b.setAttribute('aria-pressed', String(!!state.show[b.dataset.k])));
+}
+
+// ===== はじめる =====
+function start() {
+  renderTabs();
+  bindUI();
+  syncControls();
+  const ok = initThree();
+  if (!ok) {
+    $('stage').innerHTML = '<div class="fallback">立体表示の部品（three.js）を読み込めませんでした。<br>インターネットにつながっているか確認して、ページを開き直してください。</div>';
+  }
+  let first = LIB.find(e => e.id === 'water');
+  try {
+    const h = decodeURIComponent(location.hash.slice(1));
+    const hit = LIB.find(e => e.id === h);
+    if (hit) first = hit;
+  } catch (err) { /* 無視 */ }
+  state.cat = first.cat;
+  renderTabs();
+  selectEntry(first);
+}
+start();
+</script>
+</body>
+</html>
