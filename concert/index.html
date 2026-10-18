@@ -354,20 +354,22 @@ const cur = () => state.concerts.find(c => c.id === state.currentId) || state.co
 const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1])*60 + (+m[2]) : null; };
 const hm = m => { m = Math.round(m); m = ((m % 1440) + 1440) % 1440; return Math.floor(m/60) + ':' + String(m%60).padStart(2,'0'); };
 const dur = m => { m = Math.round(Math.abs(m)); const h = Math.floor(m/60), r = m%60; return h ? (r ? `${h}時間${r}分` : `${h}時間`) : `${r}分`; };
-// 4 / 4分 / 4:30 / 4'30" / 4分30秒 / 4分半 / 約4分 / (4分) を「分」に直す
-const DUR_BODY = String.raw`約?(\d{1,3})(?:[:：'’′](\d{1,2})["”″]?|分(?:(\d{1,2})秒|(半))?)?`;
+// 4 / 4.5 / 4分 / 4分間 / 4:30 / 4'30" / 4分30秒 / 4分半 / 約4分 / (4分) / 4:30:00（Excel）を「分」に直す
+const DUR_BODY = String.raw`約?(\d{1,3}(?:\.\d+)?)(?:[:：'’′](\d{1,2})(?:[:：]\d{2})?["”″]?|分間?(?:(\d{1,2})秒?|(半))?)?`;
 const DUR_RE = new RegExp(`^[（(]?${DUR_BODY}[）)]?$`);
 const DUR_NC = DUR_BODY.replace(/\((?!\?)/g, '(?:');
 // 「宝島6分」「（和泉宏隆）6」のように時間がくっついていたら離す
 function splitGluedDur(s){
   return s
     .replace(new RegExp(`([）」』)”"])\\s*(${DUR_NC})$`), '$1 $2')
-    .replace(/([^\s\d.])(約?\d{1,3}(?:分(?:\d{1,2}秒|半)?|['’′]\d{1,2}["”″]?|[:：]\d{2}))$/, '$1 $2');
+    .replace(/([^\s\d.:：'’′])(約?\d{1,3}(?:\.\d+)?(?:分間?(?:\d{1,2}秒?|半)?|['’′]\d{1,2}["”″]?|[:：]\d{2}))$/, '$1 $2');
 }
+// 「（6分）」のようなカッコ付きの時間や、くっついた時間を離す
+const detachDur = s => splitGluedDur(s.replace(new RegExp(`\\s*[（(]\\s*(${DUR_NC})\\s*[）)]`), ' $1'));
 function readDur(t){
   const m = DUR_RE.exec(t || '');
   if(!m) return null;
-  return +m[1] + (m[4] ? 0.5 : Math.min(59, +(m[2] || m[3] || 0)) / 60);
+  return parseFloat(m[1]) + (m[4] ? 0.5 : Math.min(59, +(m[2] || m[3] || 0)) / 60);
 }
 const minTxt = m => { const s = Math.round((+m || 0) * 60), r = s % 60; return r ? `${Math.floor(s/60)}:${String(r).padStart(2,'0')}` : String(s/60); };
 
@@ -454,10 +456,9 @@ function parseLine(raw, prevGroup = ''){
     s = cellsToLine(cells);
   }
   // 「翼をください(4分)」のようなカッコ付きの時間は離して読む
-  s = s.replace(new RegExp(`\\s*[（(]\\s*(${DUR_NC})\\s*[）)]`), ' $1');
-  s = splitGluedDur(s);
+  s = detachDur(s);
   // 「休憩15」のように数字がくっついていても読めるように
-  s = s.replace(/^(\S+?)(\d{1,3})分?$/, (m, w, n) => keywordType(w) ? `${w} ${n}` : m);
+  s = s.replace(/^(\S+?)(\d{1,3})(分間?)?$/, (m, w, n) => keywordType(w) ? `${w} ${n}` : m);
   // 「」で囲んだ曲名はスペースを含んでもひとかたまり
   let quoted = null;
   // （" は 4'30" の秒にも使うので、前後そろっているときだけ曲名とみなす）
@@ -512,10 +513,15 @@ function parseLine(raw, prevGroup = ''){
 }
 
 // 貼り付けた1行を、1行入力と同じ形にそろえる（Excelの列にも対応）
-const quoteIfSpace = t => /\s/.test(t) ? `「${t}」` : t;
+// 先頭の「1」「2.」のような番号の列は捨てる
+function dropNumberCells(cells){
+  cells = cells.map(x => x.trim()).filter(Boolean);
+  while(cells.length > 2 && /^\d{1,3}[.．)）]?$/.test(z2h(cells[0]))) cells.shift();
+  return cells;
+}
 // 表の1行（団体｜曲名｜作曲者｜分）を1行入力の形にする
 function cellsToLine(cells){
-  cells = cells.map(x => x.trim()).filter(Boolean);
+  cells = dropNumberCells(cells);
   if(!cells.length) return '';
   if(keywordType(z2h(cells[0])) || cells.length < 2) return cells.join(' ');
   let min = '';
@@ -529,10 +535,12 @@ function normalizePasted(line){
 }
 const isHeaderLine = l => /曲名|団体名|作曲者|演目/.test(l) && !/\d/.test(z2h(l));
 // 「【吹奏楽部】」「吹奏楽部：」「■吹奏楽部」のような見出し行なら団体名を返す
+const SECTION_RE = /^(第?\s*[0-9一二三四五]+\s*部|前半|後半|オープニング|エンディング)$/;
+const isSectionHeading = l => { const m = /^\s*[【\[［〔<＜■◆●◎]?\s*(.+?)\s*[】\]］〕>＞：:]?\s*$/.exec(z2h(l)); return !!m && SECTION_RE.test(m[1]); };
 function groupHeading(l){
   const m = /^\s*(?:[【\[［〔<＜]\s*(.+?)\s*[】\]］〕>＞]|[■◆●◎]\s*(.+?)|(.+?)\s*[：:])\s*$/.exec(z2h(l));
   const name = m && (m[1] || m[2] || m[3]).trim();
-  return name && !keywordType(name) && readDur(name) === null ? name : null;
+  return name && !keywordType(name) && readDur(name) === null && !SECTION_RE.test(name) ? name : null;
 }
 // 貼り付けた文章を1行入力の形に。見出しの下の行には、その団体名を付ける
 function pastedToLines(text){
@@ -541,19 +549,28 @@ function pastedToLines(text){
   const known = new Set(knownGroups());
   for(const raw of text.split(/\r?\n/)){
     if(!raw.trim() || isHeaderLine(raw)) continue;
+    if(isSectionHeading(raw)){ group = null; continue; }   // 「第1部」は団体ではなく区切り
     const h = groupHeading(raw);
     if(h){ group = h; known.add(h); continue; }
     let line = normalizePasted(raw);
     if(!line) continue;
+    if(group && raw.includes('\t')){
+      // 見出しの下のExcelの行：団体名の列がなければ見出しの団体を先頭に足す
+      const cells = dropNumberCells(['', ...raw.split('\t')]);
+      const head = z2h(cells[0] || '');
+      if(!keywordType(head) && !known.has(head)){ out.push(cellsToLine([group, ...cells])); continue; }
+    }
     const first = z2h(line).split(/\s+/)[0];
     if(keywordType(first)) group = null;          // 休憩などが来たら見出しの区切りは終わり
     else if(known.has(first)) group = null;       // 団体名から書いてある行はそのまま
     if(group && !raw.includes('\t')){
       // 見出しの下では、時間をのぞいた残りを丸ごと曲名として読む
-      const toks = splitGluedDur(z2h(line)).split(/\s+/);
+      const toks = detachDur(z2h(line)).split(/\s+/);
       const d = toks.length > 1 && readDur(toks[toks.length-1]) !== null ? toks.pop() : '';
       const body = toks.join(' ');
-      line = /[「『“"\/／|｜]/.test(body) ? `${group} ${line}` : [group, `「${body}」`, d].filter(Boolean).join(' ');
+      if(/[「『“"]/.test(body)) line = `${group} ${line}`;
+      else if(/[\/／|｜]/.test(body)) line = `${group}／${line}`;
+      else line = [group, `「${body}」`, d].filter(Boolean).join(' ');
     }
     out.push(line);
   }
@@ -985,7 +1002,8 @@ function gEnd(){
 }
 
 function dragBegin(){
-  if(openId){ openId = null; renderList(); g.row = rowOf(g.id); }
+  // 開いている編集欄は、行を作り直さずにその場で閉じる（作り直すと指の動きが届かなくなる）
+  if(openId){ const o = rowOf(openId); o?.classList.remove('open'); o?.querySelector('.editor')?.remove(); openId = null; }
   g.mode = 'drag';
   g.rows = [...listEl.children];
   g.idx = g.rows.indexOf(g.row);
@@ -1159,7 +1177,7 @@ function renderSuggest(){
         .filter(s => q ? s.title.includes(q) : s.group === group)
         .sort((a, b) => (b.group === group) - (a.group === group))
         .slice(0, 5)
-        .map(s => ({fill:[toks[0], quoteIfSpace(s.title), s.composer, minTxt(s.min)].filter(Boolean).join(' '),
+        .map(s => ({fill:[toks[0], `「${s.title}」`, s.composer, s.guess ? '' : minTxt(s.min)].filter(Boolean).join(' '),
                     label:`${s.title}・${minTxt(s.min)}${minTxt(s.min).includes(':') ? '' : '分'}`}));
     }
   }
@@ -1219,6 +1237,7 @@ lineEl.addEventListener('paste', e => {
   if(!/[\r\n]/.test(text.trim())) return;   // 1行だけなら普通に貼り付け
   e.preventDefault();
   const lines = pastedToLines(text);
+  const prevAnchor = anchorId;
   const added = addLines(lines);
   if(!added.length) return;
   save(); renderList(); renderPreview();
@@ -1226,7 +1245,7 @@ lineEl.addEventListener('paste', e => {
   const c = cur(), ids = new Set(added.map(x => x.id));
   toast(`${added.length}件 追加しました`, () => {
     c.items = c.items.filter(x => !ids.has(x.id));
-    if(ids.has(anchorId)) anchorId = null;
+    anchorId = prevAnchor && c.items.some(x => x.id === prevAnchor) ? prevAnchor : null;
     save(); renderList(); renderPreview();
   });
 });
