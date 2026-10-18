@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>演奏会進行メーカー</title>
+<meta name="description" content="1行打つだけで演目を追加。タイムテーブル・進行台本・プログラムを自動で作る、学校の演奏会のための進行表アプリ。">
+<meta name="theme-color" content="#faf8f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141312" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#faf8f4; --surface:#ffffff; --ink:#1f1d1a; --muted:#7d776d; --faint:#b3ada3;
+  --line:#ebe6dd; --hover:#f4f1ea;
+  --accent:#7d2b3a; --accent-ink:#ffffff; --accent-soft:#f5e9eb;
+  --danger:#c0392b; --danger-soft:#fbeaea;
+  --c-perform:#3d5a98; --c-break:#3f7d5c; --c-change:#a8701c; --c-speech:#7a5a8c; --c-plain:#7d776d;
+  --shadow:0 10px 30px rgba(40,30,20,.12);
+  --mincho:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho","YuMincho","Noto Serif JP",serif;
+  --gothic:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141312; --surface:#1c1b19; --ink:#ece8e1; --muted:#9c958a; --faint:#5f5a53;
+    --line:#2c2a27; --hover:#232220;
+    --accent:#e09aa6; --accent-ink:#1c1b19; --accent-soft:#33252a;
+    --danger:#ef7a6e; --danger-soft:#3a2321;
+    --c-perform:#8fa8e0; --c-break:#7fc29f; --c-change:#e0ad5c; --c-speech:#bf9fd1; --c-plain:#9c958a;
+    --shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--gothic);font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;padding-bottom:calc(190px + env(safe-area-inset-bottom))}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+.wrap{max-width:680px;margin:0 auto;padding:0 20px}
+
+/* ---------- 上部 ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0 4px}
+.brand{font-family:var(--mincho);font-size:13px;letter-spacing:.18em;color:var(--muted)}
+
+.info{margin:18px 0 6px}
+.info-line{display:block;width:100%;text-align:left;border-radius:14px;padding:10px 12px;margin:0 -12px;width:calc(100% + 24px)}
+.info-line:hover{background:var(--hover)}
+.info-name{font-family:var(--mincho);font-weight:600;font-size:24px;line-height:1.35;margin:0;letter-spacing:.02em}
+.info-meta{color:var(--muted);font-size:13px;margin-top:4px}
+.info-meta .sep{margin:0 .5em;color:var(--faint)}
+.info-form{display:none;margin-top:8px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.info.open .info-line{display:none}
+.info.open .info-form{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 14px}
+.grid .full{grid-column:1/-1}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.field input,.field textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 11px;outline:none}
+.field textarea{resize:vertical;min-height:62px}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.form-foot{display:flex;justify-content:flex-end;margin-top:16px}
+.btn{border-radius:999px;padding:8px 18px;font-size:14px;border:1px solid var(--line);background:var(--surface)}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.text{border:0;background:none;padding:8px 6px;color:var(--muted)}
+.btn.text.danger{color:var(--danger)}
+
+/* ---------- 終演予定バー ---------- */
+.status{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -20px;padding:10px 20px}
+.status-in{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-size:14px}
+.status b{font-family:var(--mincho);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;margin-left:4px}
+.status .slash{color:var(--faint)}
+.status .left{color:var(--muted)}
+.status .left b{color:var(--ink)}
+.status.over .left,.status.over .left b{color:var(--danger)}
+
+/* ---------- 一覧 ---------- */
+.list{list-style:none;margin:8px 0 0;padding:0}
+.row{position:relative;border-bottom:1px solid var(--line);touch-action:pan-y;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.row-bg{position:absolute;inset:0;background:var(--danger);color:#fff;display:flex;align-items:center;
+  justify-content:flex-end;padding:0 22px;font-size:13px;opacity:0;pointer-events:none}
+.row.swiping .row-bg{opacity:1}
+.row-main{position:relative;display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center;
+  padding:14px 4px;background:var(--bg);cursor:pointer;transition:background .15s}
+.row-main:hover{background:var(--hover)}
+.r-time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:14px;letter-spacing:.02em}
+.r-body{min-width:0}
+.r-title{font-family:var(--mincho);font-weight:600;font-size:16.5px;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-sub{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.r-sub .tag{display:inline-block;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:1px}
+.r-min{font-variant-numeric:tabular-nums;font-size:16px;text-align:right;min-width:42px}
+.r-min small{font-size:11px;color:var(--muted);margin-left:1px}
+.r-del{position:absolute;right:-34px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;
+  color:var(--faint);font-size:18px;line-height:28px;opacity:0;transition:opacity .15s}
+.r-del:hover{color:var(--danger);background:var(--danger-soft)}
+@media (hover:hover){.row-main:hover .r-del{opacity:1}}
+@media (max-width:760px){.r-del{display:none}}
+
+.chip{display:inline-block;font-size:10.5px;line-height:1;padding:4px 7px 3px;border-radius:999px;margin-right:7px;vertical-align:2px;
+  font-family:var(--gothic);font-weight:500;letter-spacing:.04em;
+  color:var(--c);background:color-mix(in srgb,var(--c) 13%,transparent)}
+.t-perform{--c:var(--c-perform)} .t-break{--c:var(--c-break)} .t-change{--c:var(--c-change)}
+.t-speech{--c:var(--c-speech)} .t-announce,.t-open,.t-close,.t-other{--c:var(--c-plain)}
+.row.t-break .row-main{background:color-mix(in srgb,var(--c-break) 5%,var(--bg))}
+.row.t-break .row-main:hover{background:color-mix(in srgb,var(--c-break) 9%,var(--bg))}
+
+.row.dragging{z-index:30}
+.row.dragging .row-main{box-shadow:var(--shadow);border-radius:12px;background:var(--surface)}
+body.is-dragging .row:not(.dragging){transition:transform .18s ease}
+body.is-dragging{cursor:grabbing}
+.row.flash .row-main{animation:flash 1.2s ease}
+@keyframes flash{0%{background:var(--accent-soft)}100%{background:var(--bg)}}
+
+/* ---------- その場で編集 ---------- */
+.editor{display:none;position:relative;padding:4px 4px 20px 70px;background:var(--bg)}
+.row.open .editor{display:block}
+.row.open .row-main{background:var(--hover)}
+.types{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 16px}
+.types button{font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.types button.on{border-color:var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent)}
+.ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ed-grid .full{grid-column:1/-1}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.stepper button{width:38px;height:36px;font-size:18px;color:var(--muted)}
+.stepper button:hover{color:var(--ink)}
+.stepper input{width:44px;text-align:center;border:0;background:none;outline:none;font-variant-numeric:tabular-nums;padding:0}
+.stepper span{font-size:12px;color:var(--muted);margin-right:4px}
+.ed-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+
+/* ---------- 下の入力欄 ---------- */
+.composer{position:fixed;left:0;right:0;bottom:0;z-index:40;
+  background:var(--bg);padding:10px 0 calc(14px + env(safe-area-inset-bottom))}
+.composer::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:28px;pointer-events:none;
+  background:linear-gradient(to top,var(--bg),color-mix(in srgb,var(--bg) 0%,transparent))}
+.composer .wrap{position:relative}
+.preview{min-height:22px;font-size:12.5px;color:var(--muted);padding:0 6px 6px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.preview .k{color:var(--faint);margin-left:8px;font-size:11px}
+.preview .k:first-of-type{margin-left:0}
+.preview .v{color:var(--ink)}
+.preview .enter{margin-left:auto;color:var(--faint);font-size:11px}
+.suggest{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px 8px}
+.suggest:empty{display:none}
+.suggest button{font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.suggest button:hover{border-color:var(--accent);color:var(--accent)}
+.bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:6px 6px 6px 20px;box-shadow:var(--shadow)}
+.bar:focus-within{border-color:var(--accent)}
+.bar input{flex:1;min-width:0;border:0;outline:none;background:none;font-size:16px;padding:8px 0}
+.bar input::placeholder{color:var(--faint)}
+.add{width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:22px;line-height:40px;flex:none;opacity:.35;transition:opacity .15s}
+.add.ready{opacity:1}
+
+/* ---------- お知らせ（元に戻す） ---------- */
+.toast{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:50;
+  background:var(--ink);color:var(--bg);border-radius:999px;padding:9px 10px 9px 20px;font-size:13.5px;display:flex;gap:14px;align-items:center;
+  opacity:0;pointer-events:none;transition:all .2s;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast button{color:var(--bg);font-weight:600;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--bg) 18%,transparent);flex:none}
+
+@media (max-width:520px){
+  .wrap{padding:0 16px}
+  .status{margin:0 -16px;padding:10px 16px}
+  .info-name{font-size:21px}
+  .row-main{grid-template-columns:46px 1fr auto;gap:10px}
+  .editor{padding-left:4px}
+  .grid3{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">演奏会進行メーカー</div>
+  </header>
+
+  <section class="info" id="info">
+    <button class="info-line" id="infoLine" type="button"></button>
+    <div class="info-form" id="infoForm">
+      <div class="grid">
+        <div class="field full"><label for="f-name">演奏会名</label><input id="f-name" data-info="name"></div>
+        <div class="field"><label for="f-date">日付</label><input id="f-date" type="date" data-info="date"></div>
+        <div class="field"><label for="f-venue">会場</label><input id="f-venue" data-info="venue"></div>
+        <div class="field full grid3">
+          <div class="field"><label for="f-doors">開場</label><input id="f-doors" type="time" data-info="doors"></div>
+          <div class="field"><label for="f-start">開演</label><input id="f-start" type="time" data-info="start"></div>
+          <div class="field"><label for="f-exit">会場退出</label><input id="f-exit" type="time" data-info="exit"></div>
+        </div>
+        <div class="field full"><label for="f-mc">司会者</label><input id="f-mc" data-info="mc" placeholder="例）放送部 山田さん"></div>
+      </div>
+      <div class="form-foot"><button class="btn primary" id="infoDone" type="button">閉じる</button></div>
+    </div>
+  </section>
+
+  <div class="status" id="status"><div class="status-in" id="statusIn"></div></div>
+
+  <ul class="list" id="list"></ul>
+</div>
+
+<div class="composer">
+  <div class="wrap">
+    <div class="suggest" id="suggest"></div>
+    <div class="preview" id="preview"></div>
+    <div class="bar">
+      <input id="line" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="enter"
+        placeholder="合唱部 翼をください 村井邦彦 4" aria-label="演目を1行で入力">
+      <button class="add" id="addBtn" type="button" aria-label="追加">＋</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="toastBtn" type="button">元に戻す</button></div>
+
+<script>
+'use strict';
+/* ============================================================
+   データ
+   ============================================================ */
+const STORE_KEY = 'concert-maker-v1';
+const TYPES = ['perform','break','change','speech','announce','open','close','other'];
+const TYPE_LABEL = {perform:'演奏',break:'休憩',change:'転換',speech:'あいさつ',announce:'影アナ',open:'開会',close:'閉会',other:'その他'};
+const DEFAULT_MIN = {perform:5,break:15,change:5,speech:3,announce:2,open:1,close:2,other:3};
+
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
+const newItem = (type, o = {}) => ({id:uid(), type, group:'', title:'', composer:'', min:DEFAULT_MIN[type], mc:'', crew:'', ...o});
+
+function sampleConcert(){
+  return {
+    id:uid(), name:'第25回 音楽部 定期演奏会（記入例）', date:'2026-11-23', venue:'市民文化会館 大ホール',
+    doors:'13:00', start:'13:30', exit:'16:30', mc:'',
+    items:[
+      newItem('announce',{min:2}),
+      newItem('open',{min:1}),
+      newItem('speech',{group:'校長',min:3}),
+      newItem('perform',{group:'合唱部',title:'翼をください',composer:'村井邦彦',min:4,crew:'ひな壇3段・マイク2本'}),
+      newItem('perform',{group:'合唱部',title:'ふるさと',composer:'岡野貞一',min:4}),
+      newItem('change',{min:8,crew:'ひな壇を片付け、弦楽用の椅子12脚と譜面台を並べる'}),
+      newItem('perform',{group:'弦楽合奏部',title:'アイネ・クライネ・ナハトムジーク 第1楽章',composer:'モーツァルト',min:7}),
+      newItem('break',{min:15}),
+      newItem('perform',{group:'吹奏楽部',title:'アルヴァマー序曲',composer:'J.バーンズ',min:8,crew:'打楽器を上手側に'}),
+      newItem('perform',{group:'全部員',title:'威風堂々 第1番',composer:'エルガー',min:7}),
+      newItem('close',{min:2}),
+    ]
+  };
+}
+
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if(s && Array.isArray(s.concerts) && s.concerts.length) return s;
+  }catch(e){}
+  return null;
+}
+let state = load();
+if(!state){ const c = sampleConcert(); state = {concerts:[c], currentId:c.id, groups:[]}; }
+if(!state.groups) state.groups = [];
+
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+const cur = () => state.concerts.find(c => c.id === state.currentId) || state.concerts[0];
+
+/* ============================================================
+   時刻の計算
+   ============================================================ */
+const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1])*60 + (+m[2]) : null; };
+const hm = m => { m = Math.round(m); m = ((m % 1440) + 1440) % 1440; return Math.floor(m/60) + ':' + String(m%60).padStart(2,'0'); };
+const dur = m => { m = Math.round(Math.abs(m)); const h = Math.floor(m/60), r = m%60; return h ? (r ? `${h}時間${r}分` : `${h}時間`) : `${r}分`; };
+
+// 開演前アナウンス（影アナ）は開演時刻の前に流す。そのぶん開始を前にずらす
+function schedule(c){
+  const start = toMin(c.start) ?? 0;
+  let lead = 0;
+  for(const it of c.items){ if(it.type === 'announce') lead += +it.min || 0; else break; }
+  let t = start - lead;
+  const map = {};
+  for(const it of c.items){ map[it.id] = {start:t, end:t + (+it.min || 0)}; t += +it.min || 0; }
+  return {map, end:t};
+}
+
+/* ============================================================
+   1行入力の読み取り
+   ============================================================ */
+const z2h = s => s.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/　/g,' ');
+const KEYWORDS = [
+  ['break',   /^(休憩|休み|インターミッション)$/],
+  ['change',  /^(転換|ステージ転換|セッティング|準備)$/],
+  ['speech',  /^(あいさつ|挨拶|ご挨拶|ごあいさつ)$/],
+  ['announce',/^(影アナ|影アナウンス|アナウンス|開演前アナウンス)$/],
+  ['open',    /^(開会|開会式|開会のことば|開演)$/],
+  ['close',   /^(閉会|閉会式|閉会のことば|終演)$/],
+  ['other',   /^(その他|進行)$/],
+];
+const keywordType = w => (KEYWORDS.find(([,re]) => re.test(w)) || [])[0];
+const MIN_RE = /^(\d{1,3})分?$/;
+const TITLE_TAIL_RE = /^(第.+|No\.?\s?\d+|Op\.?\s?\d+|.*楽章|.*番|.*組曲|より|から)$/i;
+
+function parseLine(raw){
+  let s = z2h(raw).trim();
+  if(!s) return null;
+  // 「休憩15」のように数字がくっついていても読めるように
+  s = s.replace(/^(\S+?)(\d{1,3})分?$/, (m, w, n) => keywordType(w) ? `${w} ${n}` : m);
+  // 「」で囲んだ曲名はスペースを含んでもひとかたまり
+  let quoted = null;
+  s = s.replace(/[「『"“]([^」』"”]*)[」』"”]?/, (m, t) => { quoted = t.trim(); return ' \u0001 '; });
+  let toks = s.split(/\s+/).filter(Boolean);
+  let min = null;
+  if(toks.length > 1 || (toks.length === 1 && quoted !== null)){
+    const m = MIN_RE.exec(toks[toks.length-1]);
+    if(m){ min = +m[1]; toks.pop(); }
+  }
+  if(!toks.length) return null;
+
+  const kw = keywordType(toks[0]);
+  if(kw){
+    const rest = toks.slice(1).map(t => t === '\u0001' ? quoted : t);
+    // 休憩・転換は数字が途中にあっても拾う（例：転換 8 ひな壇撤去）
+    if(min === null && (kw === 'break' || kw === 'change')){
+      const i = rest.findIndex(t => MIN_RE.test(t));
+      if(i >= 0){ min = +MIN_RE.exec(rest[i])[1]; rest.splice(i,1); }
+    }
+    const text = rest.join(' ');
+    const o = {type:kw, min: min ?? DEFAULT_MIN[kw]};
+    if(kw === 'speech') o.group = text;
+    else if(kw === 'break' || kw === 'change') o.crew = text;
+    else if(kw === 'other') o.title = text;
+    else if(text) o.mc = text;
+    return o;
+  }
+
+  // それ以外は演奏：団体 曲名 作曲者 分
+  let group = '', title = '', composer = '';
+  const qi = toks.indexOf('\u0001');
+  if(qi >= 0){
+    group = toks.slice(0, qi).join(' ');
+    title = quoted;
+    composer = toks.slice(qi+1).join(' ');
+  }else{
+    group = toks[0];
+    const r = toks.slice(1);
+    if(r.length >= 2 && !TITLE_TAIL_RE.test(r[r.length-1])) composer = r.pop();
+    title = r.join(' ');
+  }
+  return {type:'perform', group, title, composer, min: min ?? DEFAULT_MIN.perform};
+}
+
+/* ============================================================
+   表示用のことば
+   ============================================================ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function itemTitle(it){
+  switch(it.type){
+    case 'perform':  return it.title || it.group || '（曲名未入力）';
+    case 'break':    return '休憩';
+    case 'change':   return 'ステージ転換';
+    case 'speech':   return it.group ? `${it.group}あいさつ` : 'あいさつ';
+    case 'announce': return '開演前アナウンス';
+    case 'open':     return '開会';
+    case 'close':    return '閉会';
+    default:         return it.title || 'その他';
+  }
+}
+function itemSub(it){
+  if(it.type === 'perform') return [it.title ? it.group : '', it.composer].filter(Boolean).join('・');
+  if(it.type === 'change' || it.type === 'break') return it.crew;
+  if(it.type === 'announce') return '携帯電話・撮影のお願い';
+  return '';
+}
+
+const WEEK = '日月火水木金土';
+function fmtDate(d){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d || '');
+  if(!m) return '';
+  const dt = new Date(+m[1], +m[2]-1, +m[3]);
+  return `${+m[2]}月${+m[3]}日（${WEEK[dt.getDay()]}）`;
+}
+
+/* ============================================================
+   画面：演奏会の情報
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const infoEl = $('info');
+
+function renderInfo(){
+  const c = cur();
+  const meta = [fmtDate(c.date), c.venue, c.start && `開演 ${c.start}`].filter(Boolean);
+  $('infoLine').innerHTML =
+    `<h1 class="info-name">${esc(c.name || '演奏会名を入力')}</h1>` +
+    `<div class="info-meta">${meta.map(esc).join('<span class="sep">・</span>') || 'タップして日付・会場・時刻を入力'}</div>`;
+  document.title = (c.name ? c.name + ' — ' : '') + '演奏会進行メーカー';
+}
+function openInfo(){
+  const c = cur();
+  document.querySelectorAll('[data-info]').forEach(el => el.value = c[el.dataset.info] || '');
+  infoEl.classList.add('open');
+  $('f-name').focus();
+}
+$('infoLine').addEventListener('click', openInfo);
+$('infoDone').addEventListener('click', () => { infoEl.classList.remove('open'); renderInfo(); });
+document.querySelectorAll('[data-info]').forEach(el => el.addEventListener('input', () => {
+  cur()[el.dataset.info] = el.value;
+  save();
+  if(['start','exit'].includes(el.dataset.info)) refreshTimes();
+}));
+
+/* ============================================================
+   画面：演目一覧
+   ============================================================ */
+const listEl = $('list');
+let openId = null;
+
+function rowMainHTML(it, time){
+  const sub = itemSub(it);
+  const tags = (it.mc ? '<span class="tag">司会</span>' : '') + (it.crew && it.type !== 'change' && it.type !== 'break' ? '<span class="tag">裏方</span>' : '');
+  return `<div class="r-time">${time}</div>
+    <div class="r-body">
+      <div class="r-title"><span class="chip">${TYPE_LABEL[it.type]}</span>${esc(itemTitle(it))}</div>
+      ${sub || tags ? `<div class="r-sub">${esc(sub)}${tags}</div>` : ''}
+    </div>
+    <div class="r-min">${+it.min || 0}<small>分</small></div>
+    <button class="r-del" type="button" data-act="del" aria-label="削除">×</button>`;
+}
+
+function field(label, key, it, opt = {}){
+  const v = esc(it[key]);
+  const ph = opt.ph ? ` placeholder="${esc(opt.ph)}"` : '';
+  const input = opt.area
+    ? `<textarea data-f="${key}" rows="2"${ph}>${v}</textarea>`
+    : `<input data-f="${key}" value="${v}"${ph}>`;
+  return `<div class="field${opt.full ? ' full' : ''}"><label>${label}</label>${input}</div>`;
+}
+
+function editorHTML(it){
+  const types = TYPES.map(t => `<button type="button" class="t-${t}${t === it.type ? ' on' : ''}" data-act="type" data-type="${t}">${TYPE_LABEL[t]}</button>`).join('');
+  let f = '';
+  if(it.type === 'perform'){
+    f += field('団体', 'group', it, {ph:'合唱部'});
+    f += field('作曲者', 'composer', it, {ph:'村井邦彦'});
+    f += field('曲名', 'title', it, {full:true, ph:'翼をください'});
+  }else if(it.type === 'speech'){
+    f += field('話す人', 'group', it, {ph:'校長'});
+  }else if(it.type === 'other'){
+    f += field('内容', 'title', it, {ph:'花束贈呈'});
+  }
+  f += `<div class="field${it.type === 'perform' || it.type === 'other' || it.type === 'speech' ? '' : ' full'}"><label>時間</label>
+    <div class="stepper"><button type="button" data-act="minus" aria-label="1分減らす">−</button><input data-f="min" inputmode="numeric" value="${+it.min || 0}"><span>分</span><button type="button" data-act="plus" aria-label="1分増やす">＋</button></div></div>`;
+  f += field('司会のひとこと', 'mc', it, {full:true, area:true, ph:'セリフの後ろに付け足されます'});
+  f += field('裏方メモ', 'crew', it, {full:true, area:true, ph:'ひな壇・照明・マイク・譜面台など'});
+  return `<div class="types">${types}</div><div class="ed-grid">${f}</div>
+    <div class="ed-foot"><button type="button" class="btn text danger" data-act="del">削除</button><button type="button" class="btn" data-act="close">閉じる</button></div>`;
+}
+
+function renderList(){
+  const c = cur();
+  const {map} = schedule(c);
+  listEl.innerHTML = c.items.map(it => `
+    <li class="row t-${it.type}${it.id === openId ? ' open' : ''}" data-id="${it.id}">
+      <div class="row-bg">削除</div>
+      <div class="row-main">${rowMainHTML(it, hm(map[it.id].start))}</div>
+      ${it.id === openId ? `<div class="editor">${editorHTML(it)}</div>` : ''}
+    </li>`).join('');
+  refreshStatus();
+}
+
+function refreshRow(id){
+  const c = cur(), it = c.items.find(x => x.id === id), row = rowOf(id);
+  if(!it || !row) return;
+  row.querySelector('.row-main').innerHTML = rowMainHTML(it, '');
+  refreshTimes();
+}
+function refreshTimes(){
+  const {map} = schedule(cur());
+  listEl.querySelectorAll('.row').forEach(r => { const s = map[r.dataset.id]; if(s) r.querySelector('.r-time').textContent = hm(s.start); });
+  refreshStatus();
+}
+function refreshStatus(){
+  const c = cur(), {end} = schedule(c), exit = toMin(c.exit);
+  let html = `<span>終演予定<b>${hm(end)}</b></span>`;
+  let over = false;
+  if(exit !== null){
+    const left = exit - end;
+    over = left < 0;
+    html += `<span class="slash">／</span><span class="left">` +
+      (over ? `退出時刻を<b>${dur(left)}</b>超過` : `退出まで あと<b>${dur(left)}</b>`) + `</span>`;
+  }
+  $('statusIn').innerHTML = html;
+  $('status').classList.toggle('over', over);
+}
+
+const rowOf = id => listEl.querySelector(`.row[data-id="${id}"]`);
+const itemOf = id => cur().items.find(x => x.id === id);
+
+function toggleOpen(id){
+  openId = openId === id ? null : id;
+  renderList();
+}
+
+/* ---- 削除と「元に戻す」 ---- */
+let toastTimer = null, undoFn = null;
+function toast(msg, fn){
+  $('toastMsg').textContent = msg;
+  undoFn = fn;
+  $('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $('toast').classList.remove('show'); undoFn = null; }, 6000);
+}
+$('toastBtn').addEventListener('click', () => { if(undoFn) undoFn(); undoFn = null; $('toast').classList.remove('show'); });
+
+function deleteItem(id){
+  const c = cur(), i = c.items.findIndex(x => x.id === id);
+  if(i < 0) return;
+  const [removed] = c.items.splice(i, 1);
+  if(openId === id) openId = null;
+  save(); renderList();
+  toast(`「${itemTitle(removed)}」を削除しました`, () => {
+    c.items.splice(Math.min(i, c.items.length), 0, removed);
+    save(); renderList(); flash(removed.id);
+  });
+}
+function flash(id){
+  const r = rowOf(id);
+  if(!r) return;
+  r.classList.remove('flash'); void r.offsetWidth; r.classList.add('flash');
+  const b = r.getBoundingClientRect();
+  if(b.bottom > innerHeight - 150 || b.top < 60) r.scrollIntoView({block:'center', behavior:'smooth'});
+}
+
+/* ---- タップ・編集 ---- */
+let suppressClick = false;
+listEl.addEventListener('click', e => {
+  if(suppressClick){ suppressClick = false; return; }
+  const row = e.target.closest('.row'); if(!row) return;
+  const id = row.dataset.id, it = itemOf(id);
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if(act === 'del'){ deleteItem(id); return; }
+  if(act === 'close'){ openId = null; renderList(); return; }
+  if(act === 'type'){
+    const t = e.target.closest('[data-act]').dataset.type;
+    if(t !== it.type){
+      if(+it.min === DEFAULT_MIN[it.type]) it.min = DEFAULT_MIN[t];
+      it.type = t; save(); renderList();
+    }
+    return;
+  }
+  if(act === 'minus' || act === 'plus'){
+    it.min = Math.max(0, (+it.min || 0) + (act === 'plus' ? 1 : -1));
+    row.querySelector('[data-f="min"]').value = it.min;
+    save(); refreshRow(id); return;
+  }
+  if(e.target.closest('.row-main')) toggleOpen(id);
+});
+listEl.addEventListener('input', e => {
+  const f = e.target.dataset.f; if(!f) return;
+  const row = e.target.closest('.row'), it = itemOf(row.dataset.id);
+  if(f === 'min'){
+    const n = parseInt(z2h(e.target.value), 10);
+    it.min = isNaN(n) ? 0 : Math.max(0, Math.min(600, n));
+  }else{
+    it[f] = e.target.value;
+    if(f === 'group' && it.type === 'perform') rememberGroup(it.group);
+  }
+  save(); refreshRow(row.dataset.id);
+});
+listEl.addEventListener('contextmenu', e => { if(e.target.closest('.row-main')) e.preventDefault(); });
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){
+    if(openId){ openId = null; renderList(); }
+    if(infoEl.classList.contains('open')){ infoEl.classList.remove('open'); renderInfo(); }
+  }
+});
+
+/* ---- 並べ替え（ドラッグ／スマホは長押し）と、スワイプで削除 ---- */
+let g = null;   // 進行中のジェスチャー
+const LONG_PRESS = 380;
+
+function gStart(row, x, y, kind){
+  g = {row, id:row.dataset.id, x0:x, y0:y, x, y, kind, mode:'pending', timer:null};
+  if(kind === 'touch') g.timer = setTimeout(() => { if(g && g.mode === 'pending') dragBegin(); }, LONG_PRESS);
+}
+function gMove(x, y, e){
+  if(!g) return;
+  g.x = x; g.y = y;
+  const dx = x - g.x0, dy = y - g.y0;
+  if(g.mode === 'pending'){
+    if(g.kind === 'mouse'){
+      if(Math.abs(dy) > 6) dragBegin();
+    }else{
+      if(Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5){ clearTimeout(g.timer); g.mode = 'swipe'; g.row.classList.add('swiping'); }
+      else if(Math.hypot(dx, dy) > 10){ clearTimeout(g.timer); g = null; return; }   // 普通のスクロール
+    }
+  }
+  if(g.mode === 'drag'){ if(e.cancelable) e.preventDefault(); dragMove(); }
+  else if(g.mode === 'swipe'){
+    if(e.cancelable) e.preventDefault();
+    g.row.querySelector('.row-main').style.transform = `translateX(${Math.min(0, dx)}px)`;
+  }
+}
+function gEnd(){
+  if(!g) return;
+  clearTimeout(g.timer);
+  const mode = g.mode;
+  if(mode === 'drag'){ suppressClick = true; dragEnd(); }
+  else if(mode === 'swipe'){
+    suppressClick = true;
+    const main = g.row.querySelector('.row-main'), dx = g.x - g.x0, w = g.row.offsetWidth, id = g.id, row = g.row;
+    main.style.transition = 'transform .2s ease';
+    if(-dx > w * 0.33){
+      main.style.transform = `translateX(${-w}px)`;
+      setTimeout(() => deleteItem(id), 180);
+    }else{
+      main.style.transform = '';
+      setTimeout(() => { main.style.transition = ''; row.classList.remove('swiping'); }, 220);
+    }
+  }
+  setTimeout(() => { suppressClick = false; }, 400);
+  g = null;
+}
+
+function dragBegin(){
+  if(openId){ openId = null; renderList(); g.row = rowOf(g.id); }
+  g.mode = 'drag';
+  g.rows = [...listEl.children];
+  g.idx = g.rows.indexOf(g.row);
+  g.to = g.idx;
+  g.rects = g.rows.map(r => { const b = r.getBoundingClientRect(); return {top:b.top + scrollY, h:b.height}; });
+  g.startDocY = g.y0 + scrollY;
+  g.row.classList.add('dragging');
+  document.body.classList.add('is-dragging');
+  if(navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
+  const tick = () => {
+    if(!g || g.mode !== 'drag') return;
+    if(g.y < 90) scrollBy(0, -10);
+    else if(g.y > innerHeight - 170) scrollBy(0, 10);
+    dragMove();
+    g.raf = requestAnimationFrame(tick);
+  };
+  g.raf = requestAnimationFrame(tick);
+}
+function dragMove(){
+  const dy = g.y + scrollY - g.startDocY;
+  g.row.style.transform = `translateY(${dy}px)`;
+  const me = g.rects[g.idx], center = me.top + me.h/2 + dy;
+  let to = g.idx;
+  for(let i = g.idx + 1; i < g.rects.length; i++) if(center > g.rects[i].top + g.rects[i].h/2) to = i;
+  for(let i = g.idx - 1; i >= 0; i--) if(center < g.rects[i].top + g.rects[i].h/2) to = i;
+  g.to = to;
+  g.rows.forEach((r, i) => {
+    if(i === g.idx) return;
+    let s = 0;
+    if(g.idx < to && i > g.idx && i <= to) s = -me.h;
+    if(to < g.idx && i >= to && i < g.idx) s = me.h;
+    r.style.transform = s ? `translateY(${s}px)` : '';
+  });
+}
+function dragEnd(){
+  cancelAnimationFrame(g.raf);
+  document.body.classList.remove('is-dragging');
+  const c = cur();
+  if(g.to !== g.idx){
+    const [it] = c.items.splice(g.idx, 1);
+    c.items.splice(g.to, 0, it);
+    save();
+  }
+  const id = g.id;
+  renderList();
+  if(g.to !== g.idx) flash(id);
+}
+
+listEl.addEventListener('mousedown', e => {
+  if(e.button !== 0) return;
+  const main = e.target.closest('.row-main');
+  if(!main || e.target.closest('button')) return;
+  gStart(main.parentElement, e.clientX, e.clientY, 'mouse');
+});
+document.addEventListener('mousemove', e => { if(g && g.kind === 'mouse'){ gMove(e.clientX, e.clientY, e); } });
+document.addEventListener('mouseup', () => { if(g && g.kind === 'mouse') gEnd(); });
+listEl.addEventListener('touchstart', e => {
+  if(e.touches.length !== 1){ if(g){ clearTimeout(g.timer); g = null; } return; }
+  const main = e.target.closest('.row-main');
+  if(!main || e.target.closest('button')) return;
+  const t = e.touches[0];
+  gStart(main.parentElement, t.clientX, t.clientY, 'touch');
+}, {passive:true});
+document.addEventListener('touchmove', e => { if(g && g.kind === 'touch'){ const t = e.touches[0]; gMove(t.clientX, t.clientY, e); } }, {passive:false});
+document.addEventListener('touchend', () => { if(g && g.kind === 'touch') gEnd(); });
+document.addEventListener('touchcancel', () => {
+  if(!g) return;
+  clearTimeout(g.timer);
+  if(g.mode === 'drag'){ g.to = g.idx; dragEnd(); }
+  else if(g.mode === 'swipe'){ g.row.classList.remove('swiping'); g.row.querySelector('.row-main').style.transform = ''; }
+  g = null;
+});
+
+/* ============================================================
+   画面：下の1行入力
+   ============================================================ */
+const lineEl = $('line'), previewEl = $('preview'), suggestEl = $('suggest'), addBtn = $('addBtn');
+
+function rememberGroup(name){
+  name = (name || '').trim();
+  if(!name) return;
+  state.groups = [name, ...state.groups.filter(x => x !== name)].slice(0, 40);
+}
+function knownGroups(){
+  const set = new Set();
+  const items = cur().items;
+  for(let i = items.length - 1; i >= 0; i--) if(items[i].type === 'perform' && items[i].group) set.add(items[i].group);
+  state.groups.forEach(x => set.add(x));
+  state.concerts.forEach(c => c.items.forEach(it => { if(it.type === 'perform' && it.group) set.add(it.group); }));
+  return [...set];
+}
+
+function renderPreview(){
+  const p = parseLine(lineEl.value);
+  addBtn.classList.toggle('ready', !!p);
+  if(!p){ previewEl.innerHTML = ''; }
+  else{
+    const parts = [];
+    const kv = (k, v) => v && parts.push(`<span class="k">${k}</span><span class="v">${esc(v)}</span>`);
+    if(p.type === 'perform'){ kv('団体', p.group); kv('曲名', p.title); kv('作曲', p.composer); }
+    else if(p.type === 'speech') kv('話す人', p.group);
+    else if(p.type === 'other') kv('内容', p.title);
+    else kv('メモ', p.crew || p.mc);
+    kv('時間', p.min + '分');
+    previewEl.innerHTML = `<span class="chip t-${p.type}">${TYPE_LABEL[p.type]}</span>${parts.join('')}<span class="enter">Enterで追加</span>`;
+  }
+  renderSuggest();
+}
+
+function renderSuggest(){
+  const v = z2h(lineEl.value);
+  const focused = document.activeElement === lineEl;
+  let list = [];
+  if(focused && !/\s/.test(v)){
+    const q = v.trim();
+    list = knownGroups().filter(gr => gr !== q && (!q || gr.includes(q))).slice(0, 5);
+  }
+  suggestEl.innerHTML = list.map(gr => `<button type="button" data-g="${esc(gr)}">${esc(gr)}</button>`).join('');
+}
+suggestEl.addEventListener('mousedown', e => e.preventDefault());   // 入力欄のフォーカスを保つ
+suggestEl.addEventListener('click', e => {
+  const b = e.target.closest('[data-g]'); if(!b) return;
+  lineEl.value = b.dataset.g + ' ';
+  lineEl.focus();
+  renderPreview();
+});
+
+function addLine(){
+  const p = parseLine(lineEl.value);
+  if(!p) return;
+  const c = cur(), it = newItem(p.type, p);
+  it.id = uid();
+  const closeIdx = c.items.map(x => x.type).lastIndexOf('close');
+  if(closeIdx >= 0) c.items.splice(closeIdx, 0, it); else c.items.push(it);
+  if(it.type === 'perform') rememberGroup(it.group);
+  save();
+  lineEl.value = '';
+  renderList();
+  renderPreview();
+  flash(it.id);
+}
+
+lineEl.addEventListener('input', renderPreview);
+lineEl.addEventListener('focus', renderSuggest);
+lineEl.addEventListener('blur', () => setTimeout(renderSuggest, 120));
+lineEl.addEventListener('keydown', e => {
+  // 日本語変換を確定するためのEnterでは追加しない
+  if(e.key === 'Enter' && !e.isComposing && e.keyCode !== 229){ e.preventDefault(); addLine(); }
+});
+addBtn.addEventListener('click', () => { addLine(); lineEl.focus(); });
+
+/* ============================================================
+   はじめの表示
+   ============================================================ */
+if(!state.currentId) state.currentId = state.concerts[0].id;
+save();
+renderInfo();
+renderList();
+renderPreview();
+</script>
+</body>
+</html>
