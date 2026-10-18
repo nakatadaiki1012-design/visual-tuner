@@ -196,6 +196,7 @@ body.is-dragging .gap-add{display:none}
 .cnt{display:inline-flex;align-items:center;font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 12px;background:var(--surface)}
 .cnt input{width:34px;border:0;background:none;outline:none;text-align:center;font-variant-numeric:tabular-nums;color:var(--ink);padding:3px 0}
 .field label small{color:var(--faint);margin-left:4px}
+.linkbtn{color:var(--accent);font-size:12px;text-decoration:underline;text-underline-offset:2px}
 .auto{font-size:13.5px;line-height:1.9;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--c-change) 9%,var(--bg))}
 .auto b{font-weight:600;color:var(--c-change);font-size:12px;display:block}
 .ed-foot .right{display:flex;gap:8px}
@@ -445,7 +446,13 @@ function parseLine(raw, prevGroup = ''){
   let s = z2h(raw).trim();
   if(!s) return null;
   // 「合唱部／翼をください／4」のような区切り
-  if(/[\/／|｜]/.test(s) && !/[「『“"]/.test(s)) s = cellsToLine(s.split(/\s*[\/／|｜]\s*/));
+  // （スペースで区切ってある行の「/」は「和泉宏隆/真島俊夫」のような作曲/編曲なので、そのまま）
+  if(/[\/／|｜]/.test(s) && !/[「『“"]/.test(s) && !/\S\s+\S/.test(s.replace(/\s*[\/／|｜]\s*/g, '/').replace(/\s+\S+$/, m => readDur(m.trim()) !== null ? '' : m))){
+    const cells = s.split(/\s*[\/／|｜]\s*/);
+    const last = cells[cells.length-1].split(/\s+/);
+    if(last.length > 1 && readDur(last[last.length-1]) !== null) cells.splice(-1, 1, last.slice(0, -1).join(' '), last[last.length-1]);
+    s = cellsToLine(cells);
+  }
   // 「翼をください(4分)」のようなカッコ付きの時間は離して読む
   s = s.replace(new RegExp(`\\s*[（(]\\s*(${DUR_NC})\\s*[）)]`), ' $1');
   s = splitGluedDur(s);
@@ -680,7 +687,7 @@ function editorHTML(it, ctx){
   let f = '';
   if(it.type === 'perform'){
     f += field('団体', 'group', it, {ph:'合唱部'});
-    f += field('作曲者', 'composer', it, {ph:'村井邦彦'});
+    f += field('作曲・編曲', 'composer', it, {ph:'村井邦彦'});
     f += field('曲名', 'title', it, {full:true, ph:'翼をください'});
     f += field('指揮・伴奏など', 'credit', it, {full:true, ph:'指揮 山田先生　ピアノ 佐藤さん'});
   }else if(it.type === 'speech'){
@@ -688,7 +695,7 @@ function editorHTML(it, ctx){
   }else if(it.type === 'other'){
     f += field('内容', 'title', it, {ph:'花束贈呈'});
   }
-  f += `<div class="field${it.type === 'perform' || it.type === 'other' || it.type === 'speech' ? '' : ' full'}"><label>時間</label>
+  f += `<div class="field${it.type === 'perform' || it.type === 'other' || it.type === 'speech' ? '' : ' full'}"><label>時間${it.guess ? '<small>仮 ─ <button type="button" class="linkbtn" data-act="confirm">この時間で確定</button></small>' : ''}</label>
     <div class="stepper"><button type="button" data-act="minus" aria-label="1分減らす">−</button><input data-f="min" inputmode="decimal" value="${minTxt(it.min)}"><span>分</span><button type="button" data-act="plus" aria-label="1分増やす">＋</button></div></div>`;
   if(it.type === 'perform') f += setupHTML(c, it);
   const tasks = ctx.plan.tasks[it.id];
@@ -862,6 +869,7 @@ listEl.addEventListener('click', e => {
     btn.classList.toggle('on', !!s[btn.dataset.k]);
     save(); refreshAll(); return;
   }
+  if(act === 'confirm'){ delete it.guess; save(); renderList(); return; }
   if(act === 'minus' || act === 'plus'){
     it.min = Math.max(0, (+it.min || 0) + (act === 'plus' ? 1 : -1));
     delete it.guess;
