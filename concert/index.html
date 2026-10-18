@@ -347,6 +347,13 @@ const dur = m => { m = Math.round(Math.abs(m)); const h = Math.floor(m/60), r = 
 // 4 / 4分 / 4:30 / 4'30" / 4分30秒 / 4分半 / 約4分 / (4分) を「分」に直す
 const DUR_BODY = String.raw`約?(\d{1,3})(?:[:：'’′](\d{1,2})["”″]?|分(?:(\d{1,2})秒|(半))?)?`;
 const DUR_RE = new RegExp(`^[（(]?${DUR_BODY}[）)]?$`);
+const DUR_NC = DUR_BODY.replace(/\((?!\?)/g, '(?:');
+// 「宝島6分」「（和泉宏隆）6」のように時間がくっついていたら離す
+function splitGluedDur(s){
+  return s
+    .replace(new RegExp(`([）」』)”"])\\s*(${DUR_NC})$`), '$1 $2')
+    .replace(/([^\s\d.])(約?\d{1,3}(?:分(?:\d{1,2}秒|半)?|['’′]\d{1,2}["”″]?|[:：]\d{2}))$/, '$1 $2');
+}
 function readDur(t){
   const m = DUR_RE.exec(t || '');
   if(!m) return null;
@@ -431,7 +438,8 @@ function parseLine(raw, prevGroup = ''){
   // 「合唱部／翼をください／4」のような区切り
   if(/[\/／|｜]/.test(s) && !/[「『“"]/.test(s)) s = cellsToLine(s.split(/\s*[\/／|｜]\s*/));
   // 「翼をください(4分)」のようなカッコ付きの時間は離して読む
-  s = s.replace(new RegExp(`\\s*[（(]\\s*(${DUR_BODY.replace(/\((?!\?)/g, '(?:')})\\s*[）)]`), ' $1');
+  s = s.replace(new RegExp(`\\s*[（(]\\s*(${DUR_NC})\\s*[）)]`), ' $1');
+  s = splitGluedDur(s);
   // 「休憩15」のように数字がくっついていても読めるように
   s = s.replace(/^(\S+?)(\d{1,3})分?$/, (m, w, n) => keywordType(w) ? `${w} ${n}` : m);
   // 「」で囲んだ曲名はスペースを含んでもひとかたまり
@@ -477,6 +485,12 @@ function parseLine(raw, prevGroup = ''){
     if(r.length >= 2 && !TITLE_TAIL_RE.test(r[r.length-1])) composer = r.pop();
     title = r.join(' ');
   }
+  // 「宝島（和泉宏隆）」のように、カッコの中が作曲者のとき
+  const pm = /^(.+?)\s*[（(]([^（）()]+)[）)]$/.exec(title);
+  if(pm && !composer && !TITLE_TAIL_RE.test(pm[2].trim())){
+    title = pm[1];
+    composer = pm[2].replace(/^(作曲|曲)\s*[:：]?\s*/, '').trim();
+  }
   return {type:'perform', group, title, composer, min: min ?? DEFAULT_MIN.perform};
 }
 
@@ -497,6 +511,37 @@ function normalizePasted(line){
   return line.includes('\t') ? cellsToLine(line.split('\t')) : line.trim();
 }
 const isHeaderLine = l => /曲名|団体名|作曲者|演目/.test(l) && !/\d/.test(z2h(l));
+// 「【吹奏楽部】」「吹奏楽部：」「■吹奏楽部」のような見出し行なら団体名を返す
+function groupHeading(l){
+  const m = /^\s*(?:[【\[［〔<＜]\s*(.+?)\s*[】\]］〕>＞]|[■◆●◎]\s*(.+?)|(.+?)\s*[：:])\s*$/.exec(z2h(l));
+  const name = m && (m[1] || m[2] || m[3]).trim();
+  return name && !keywordType(name) && readDur(name) === null ? name : null;
+}
+// 貼り付けた文章を1行入力の形に。見出しの下の行には、その団体名を付ける
+function pastedToLines(text){
+  const out = [];
+  let group = null;
+  const known = new Set(knownGroups());
+  for(const raw of text.split(/\r?\n/)){
+    if(!raw.trim() || isHeaderLine(raw)) continue;
+    const h = groupHeading(raw);
+    if(h){ group = h; known.add(h); continue; }
+    let line = normalizePasted(raw);
+    if(!line) continue;
+    const first = z2h(line).split(/\s+/)[0];
+    if(keywordType(first)) group = null;          // 休憩などが来たら見出しの区切りは終わり
+    else if(known.has(first)) group = null;       // 団体名から書いてある行はそのまま
+    if(group && !raw.includes('\t')){
+      // 見出しの下では、時間をのぞいた残りを丸ごと曲名として読む
+      const toks = splitGluedDur(z2h(line)).split(/\s+/);
+      const d = toks.length > 1 && readDur(toks[toks.length-1]) !== null ? toks.pop() : '';
+      const body = toks.join(' ');
+      line = /[「『“"\/／|｜]/.test(body) ? `${group} ${line}` : [group, `「${body}」`, d].filter(Boolean).join(' ');
+    }
+    out.push(line);
+  }
+  return out;
+}
 
 /* ============================================================
    表示用のことば
@@ -1122,7 +1167,7 @@ lineEl.addEventListener('paste', e => {
   const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
   if(!/[\r\n]/.test(text.trim())) return;   // 1行だけなら普通に貼り付け
   e.preventDefault();
-  const lines = text.split(/\r?\n/).filter(l => l.trim() && !isHeaderLine(l)).map(normalizePasted).filter(Boolean);
+  const lines = pastedToLines(text);
   const added = addLines(lines);
   if(!added.length) return;
   save(); renderList(); renderPreview();
