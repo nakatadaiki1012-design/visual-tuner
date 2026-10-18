@@ -48,6 +48,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .info-line{display:block;width:100%;text-align:left;border-radius:14px;padding:10px 12px;margin:0 -12px;width:calc(100% + 24px)}
 .info-line:hover{background:var(--hover)}
 .info-name{font-family:var(--mincho);font-weight:600;font-size:24px;line-height:1.35;margin:0;letter-spacing:.02em}
+.info-name.empty{color:var(--faint)}
 .info-meta{color:var(--muted);font-size:13px;margin-top:4px}
 .info-meta .sep{margin:0 .5em;color:var(--faint)}
 .info-form{display:none;margin-top:8px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
@@ -109,6 +110,9 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .r-sub .tag{display:inline-block;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:1px}
 .r-min{font-variant-numeric:tabular-nums;font-size:16px;text-align:right;min-width:42px}
 .r-min small{font-size:11px;color:var(--muted);margin-left:1px}
+.r-min.guess{color:var(--muted)}
+.r-min em{font-style:normal;font-size:10px;color:var(--c-change);border:1px solid currentColor;border-radius:4px;padding:0 3px;margin-right:5px;vertical-align:2px}
+.status .warn,.status .warn b{color:var(--c-change)}
 .r-del{position:absolute;right:-34px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;
   color:var(--faint);font-size:18px;line-height:28px;opacity:0;transition:opacity .15s}
 .r-del:hover{color:var(--danger);background:var(--danger-soft)}
@@ -203,7 +207,8 @@ body.is-dragging .gap-add{display:none}
   background:var(--ink);color:var(--bg);border-radius:999px;padding:9px 10px 9px 20px;font-size:13.5px;display:flex;gap:14px;align-items:center;
   opacity:0;pointer-events:none;transition:all .2s;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
 .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
-.toast span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast{width:max-content}
+.toast span{min-width:0}
 .toast button{color:var(--bg);font-weight:600;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--bg) 18%,transparent);flex:none}
 
 @media (max-width:520px){
@@ -491,7 +496,8 @@ function parseLine(raw, prevGroup = ''){
     title = pm[1];
     composer = pm[2].replace(/^(作曲|曲)\s*[:：]?\s*/, '').trim();
   }
-  return {type:'perform', group, title, composer, min: min ?? DEFAULT_MIN.perform};
+  // 時間を書かなかった演奏は「仮」の時間（あとで部活に確認するため）
+  return {type:'perform', group, title, composer, min: min ?? DEFAULT_MIN.perform, ...(min === null ? {guess:true} : {})};
 }
 
 // 貼り付けた1行を、1行入力と同じ形にそろえる（Excelの列にも対応）
@@ -579,7 +585,7 @@ function renderInfo(){
   const c = cur();
   const meta = [fmtDate(c.date), c.venue, c.start && `開演 ${c.start}`].filter(Boolean);
   $('infoLine').innerHTML =
-    `<h1 class="info-name">${esc(c.name || '演奏会名を入力')}</h1>` +
+    `<h1 class="info-name${c.name ? '' : ' empty'}">${esc(c.name || '演奏会名を入力')}</h1>` +
     `<div class="info-meta">${meta.map(esc).join('<span class="sep">・</span>') || 'タップして日付・会場・時刻を入力'}</div>`;
   document.title = (c.name ? c.name + ' — ' : '') + '演奏会進行メーカー';
   $('sampleBar').hidden = !c.isSample;
@@ -634,7 +640,7 @@ function rowMainHTML(it, ctx){
     else if(it.type === 'other') note = esc(it.title);
     else if(it.type === 'announce') note = '携帯電話・撮影のお願い';
     else if(it.type === 'break') note = `後半 ${hm(t.end)} 開始`;
-    else if(it.type === 'change') note = taskHTML || '<span class="faint">作業内容は演奏の行の「ステージ配置」から</span>';
+    else if(it.type === 'change') note = taskHTML;
     head = `<div class="r-plain"><span class="chip">${TYPE_LABEL[it.type]}</span>${note}</div>`;
     if(it.type === 'break') sub = taskHTML;
     if((it.type === 'change' || it.type === 'break') && it.crew) sub += (sub ? '　' : '') + esc(it.crew);
@@ -643,7 +649,7 @@ function rowMainHTML(it, ctx){
   return `${plan.missing[it.id] ? '<button type="button" class="gap-add" data-act="addchange">＋ 転換</button>' : ''}
     <div class="r-time">${hm(t.start)}</div>
     <div class="r-body">${head}${sub || tags ? `<div class="r-sub">${sub}${tags}</div>` : ''}</div>
-    <div class="r-min">${mt}${mt.includes(':') ? '' : '<small>分</small>'}</div>
+    <div class="r-min${it.guess ? ' guess' : ''}"${it.guess ? ' title="時間が未確認です"' : ''}>${it.guess ? '<em>仮</em>' : ''}${mt}${mt.includes(':') ? '' : '<small>分</small>'}</div>
     <button class="r-del" type="button" data-act="del" aria-label="削除">×</button>`;
 }
 
@@ -672,6 +678,7 @@ function editorHTML(it, ctx){
     f += field('団体', 'group', it, {ph:'合唱部'});
     f += field('作曲者', 'composer', it, {ph:'村井邦彦'});
     f += field('曲名', 'title', it, {full:true, ph:'翼をください'});
+    f += field('指揮・伴奏など', 'credit', it, {full:true, ph:'指揮 山田先生　ピアノ 佐藤さん'});
   }else if(it.type === 'speech'){
     f += field('話す人', 'group', it, {ph:'校長'});
   }else if(it.type === 'other'){
@@ -744,12 +751,14 @@ function breakdownHTML(c){
     if(k in cnt) cnt[k]++;
     if(it.type === 'perform') byGroup.set(it.group || '（団体なし）', (byGroup.get(it.group || '（団体なし）') || 0) + m);
   }
+  const guesses = c.items.filter(it => it.guess).length;
   const fm = m => minTxt(m).includes(':') ? minTxt(m).replace(':', '分') + '秒' : dur(m);
   return `<div class="sum">
       <span>演奏 ${cnt.perform}曲<b>${fm(sum.perform)}</b></span>
       <span>転換 ${cnt.change}回<b>${fm(sum.change)}</b></span>
       <span>休憩<b>${fm(sum.break)}</b></span>
       <span>あいさつ・進行<b>${fm(sum.etc)}</b></span>
+      ${guesses ? `<span class="warn">時間が「仮」の曲<b>${guesses}件</b></span>` : ''}
     </div>` +
     (byGroup.size ? `<div class="groups">${[...byGroup].map(([gname, m]) => `<span>${esc(gname)}<i>${fm(m)}</i></span>`).join('')}</div>` : '');
 }
@@ -770,8 +779,9 @@ function toggleOpen(id){
 
 /* ---- 削除と「元に戻す」 ---- */
 let toastTimer = null, undoFn = null;
-function toast(msg, fn){
+function toast(msg, fn, label = '元に戻す'){
   $('toastMsg').textContent = msg;
+  $('toastBtn').textContent = label;
   undoFn = fn;
   $('toastBtn').style.display = fn ? '' : 'none';
   $('toast').classList.add('show');
@@ -837,6 +847,7 @@ listEl.addEventListener('click', e => {
   }
   if(act === 'minus' || act === 'plus'){
     it.min = Math.max(0, (+it.min || 0) + (act === 'plus' ? 1 : -1));
+    delete it.guess;
     row.querySelector('[data-f="min"]').value = minTxt(it.min);
     save(); refreshAll(); return;
   }
@@ -853,16 +864,31 @@ listEl.addEventListener('input', e => {
   }else if(f === 'min'){
     const d = readDur(z2h(e.target.value).trim());
     it.min = d === null ? 0 : Math.min(600, d);
+    delete it.guess;
   }else if(f){
     it[f] = e.target.value;
     if(f === 'group' && it.type === 'perform') row.querySelector('.setup-field').outerHTML = setupHTML(c, it);
   }else return;
   save(); refreshAll();
 });
+// 団体名を直したら、同じ名前のほかの曲もまとめて直せるようにする
+listEl.addEventListener('focusin', e => { if(e.target.dataset.f === 'group') e.target.dataset.old = e.target.value; });
 listEl.addEventListener('change', e => {
   if(e.target.dataset.f !== 'group') return;
-  const it = itemOf(e.target.closest('.row').dataset.id);
-  if(it.type === 'perform'){ rememberGroup(it.group); save(); }
+  const c = cur(), it = itemOf(e.target.closest('.row').dataset.id);
+  if(it.type !== 'perform') return;
+  const oldName = e.target.dataset.old || '', newName = it.group;
+  e.target.dataset.old = newName;
+  rememberGroup(newName);
+  if(oldName && newName && !c.setups[newName] && c.setups[oldName]) setSetup(c, newName, c.setups[oldName]);
+  save();
+  const others = c.items.filter(x => x !== it && x.type === 'perform' && x.group === oldName);
+  if(oldName && newName && oldName !== newName && others.length){
+    toast(`ほかの${others.length}曲も「${newName}」にしますか`, () => {
+      others.forEach(x => x.group = newName);
+      save(); refreshAll();
+    }, 'まとめて直す');
+  }
 });
 // キーボードでも操作できるように：Enterで開く、Alt+↑↓で移動
 listEl.addEventListener('keydown', e => {
