@@ -127,6 +127,9 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .row.t-break .row-main{background:color-mix(in srgb,var(--c-break) 5%,var(--bg))}
 .row.t-break .row-main:hover{background:color-mix(in srgb,var(--c-break) 9%,var(--bg))}
 
+.row.joined{border-bottom-color:transparent}
+.row.cont .row-main{padding-top:6px}
+.row.joined:not(.open) .row-main{padding-bottom:8px}
 .row.dragging{z-index:30}
 .row.dragging .row-main{box-shadow:var(--shadow);border-radius:12px;background:var(--surface)}
 body.is-dragging .row:not(.dragging){transition:transform .18s ease}
@@ -163,9 +166,10 @@ body.typing-elsewhere .composer{transform:translateY(120%)!important;transition:
 .preview .k:first-of-type{margin-left:0}
 .preview .v{color:var(--ink)}
 .preview .enter{margin-left:auto;color:var(--faint);font-size:11px}
-.suggest{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px 8px}
+.suggest{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 4px 8px;margin:0 -4px}
+.suggest::-webkit-scrollbar{display:none}
 .suggest:empty{display:none}
-.suggest button{font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.suggest button{flex:none;font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
 .suggest button:hover{border-color:var(--accent);color:var(--accent)}
 .bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;
   padding:6px 6px 6px 20px;box-shadow:var(--shadow)}
@@ -203,7 +207,7 @@ body.is-dragging .gap-add{display:none}
 .status .margin.short,.status .margin.short b{color:var(--danger)}
 
 /* ---------- お知らせ（元に戻す） ---------- */
-.toast{position:fixed;left:50%;bottom:calc(120px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:50;
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-20px);z-index:50;
   background:var(--ink);color:var(--bg);border-radius:999px;padding:9px 10px 9px 20px;font-size:13.5px;display:flex;gap:14px;align-items:center;
   opacity:0;pointer-events:none;transition:all .2s;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
 .toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -632,7 +636,7 @@ function rowMainHTML(it, ctx){
   if(it.type === 'perform'){
     // 演奏は曲名が主役。種類ラベルは付けない
     head = `<div class="r-title">${esc(itemTitle(it))}</div>`;
-    sub = esc([it.title ? it.group : '', it.composer].filter(Boolean).join('・'));
+    sub = esc([it.title && !ctx.cont.has(it.id) ? it.group : '', it.composer].filter(Boolean).join('・'));
   }else{
     // 進行の行は小さく。ラベルの横には中身だけ（「休憩 休憩」のような重複をしない）
     let note = '';
@@ -696,12 +700,23 @@ function editorHTML(it, ctx){
       <div class="right"><button type="button" class="btn" data-act="after">この後に追加</button><button type="button" class="btn" data-act="close">閉じる</button></div></div>`;
 }
 
-const ctxOf = c => ({map:schedule(c).map, plan:stagePlan(c)});
+// 同じ団体が続く演奏（2曲目以降）。団体名を省いて、ひとまとまりに見せる
+function continuing(c){
+  const set = new Set();
+  c.items.forEach((it, i) => {
+    const p = c.items[i-1];
+    if(p && it.type === 'perform' && p.type === 'perform' && it.group && it.group === p.group) set.add(it.id);
+  });
+  return set;
+}
+const ctxOf = c => ({map:schedule(c).map, plan:stagePlan(c), cont:continuing(c)});
+const rowClass = (it, ctx, next) =>
+  `row t-${it.type}${it.id === openId ? ' open' : ''}${ctx.cont.has(it.id) ? ' cont' : ''}${next && ctx.cont.has(next.id) ? ' joined' : ''}`;
 
 function renderList(){
   const c = cur(), ctx = ctxOf(c);
-  listEl.innerHTML = c.items.map(it => `
-    <li class="row t-${it.type}${it.id === openId ? ' open' : ''}" data-id="${it.id}">
+  listEl.innerHTML = c.items.map((it, i) => `
+    <li class="${rowClass(it, ctx, c.items[i+1])}" data-id="${it.id}">
       <div class="row-bg">削除</div>
       <div class="row-main" tabindex="0">${rowMainHTML(it, ctx)}</div>
       ${it.id === openId ? `<div class="editor">${editorHTML(it, ctx)}</div>` : ''}
@@ -714,8 +729,10 @@ function renderList(){
 function refreshAll(){
   const c = cur(), ctx = ctxOf(c);
   listEl.querySelectorAll('.row').forEach(r => {
-    const it = itemOf(r.dataset.id);
-    if(it) r.querySelector('.row-main').innerHTML = rowMainHTML(it, ctx);
+    const i = c.items.findIndex(x => x.id === r.dataset.id), it = c.items[i];
+    if(!it) return;
+    r.className = rowClass(it, ctx, c.items[i+1]) + (r.classList.contains('flash') ? ' flash' : '');
+    r.querySelector('.row-main').innerHTML = rowMainHTML(it, ctx);
   });
   const auto = listEl.querySelector('.editor .auto');
   if(auto && openId){ const t = ctx.plan.tasks[openId] || []; auto.lastChild.textContent = t.join('・'); auto.style.display = t.length ? '' : 'none'; }
