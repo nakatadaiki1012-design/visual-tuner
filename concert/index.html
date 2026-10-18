@@ -60,7 +60,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .field textarea{resize:vertical;min-height:62px}
 .field input:focus,.field textarea:focus{border-color:var(--accent)}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.form-foot{display:flex;justify-content:flex-end;margin-top:16px}
+.form-foot{display:flex;justify-content:space-between;margin-top:16px}
 .btn{border-radius:999px;padding:8px 18px;font-size:14px;border:1px solid var(--line);background:var(--surface)}
 .btn:hover{background:var(--hover)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -70,7 +70,22 @@ button{cursor:pointer;background:none;border:0;padding:0}
 /* ---------- 終演予定バー ---------- */
 .status{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -20px;padding:10px 20px}
-.status-in{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-size:14px}
+.status-in{display:flex;align-items:baseline;gap:4px 14px;flex-wrap:wrap;font-size:14px;width:100%;text-align:left}
+.status-in::after{content:"内訳";margin-left:auto;font-size:11px;color:var(--faint);align-self:center}
+.status.detail .status-in::after{content:"閉じる"}
+.status-detail{display:none;padding:12px 0 4px;font-size:13px;color:var(--muted)}
+.status.detail .status-detail{display:block}
+.sum{display:flex;flex-wrap:wrap;gap:4px 18px}
+.sample[hidden]{display:none}
+.status .sum b{font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);margin-left:4px}
+.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,190px));gap:2px 28px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.groups span{display:flex;justify-content:space-between;gap:8px}
+.groups span i{font-style:normal;color:var(--ink);font-variant-numeric:tabular-nums}
+.sample{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);background:var(--accent-soft);border-radius:12px;padding:8px 8px 8px 16px;margin:4px 0 12px}
+.sample .btn{margin-left:auto;padding:5px 14px;font-size:13px;border-color:var(--accent);color:var(--accent);background:var(--surface)}
+.sample .x{width:30px;height:30px;border-radius:50%;color:var(--muted);font-size:17px}
+.empty{color:var(--muted);font-size:13.5px;line-height:1.9;text-align:center;margin:28px 0}
+.empty b{color:var(--ink);font-weight:500;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
 .status b{font-family:var(--mincho);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;margin-left:4px}
 .status .slash{color:var(--faint)}
 .status .left{color:var(--muted)}
@@ -120,6 +135,8 @@ body.is-dragging{cursor:grabbing}
 .row.open .editor{display:block}
 .row.open .row-main{background:var(--hover)}
 .types{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 16px}
+body.typing-elsewhere .composer{transform:translateY(120%)!important;transition:transform .2s}
+.row-main:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px}
 .types button{font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .types button.on{border-color:var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent)}
 .ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -159,7 +176,11 @@ body.is-dragging{cursor:grabbing}
   padding:1px 12px;border-radius:999px;border:1px dashed var(--c-change);color:var(--c-change);background:var(--bg);white-space:nowrap}
 .gap-add:hover{background:color-mix(in srgb,var(--c-change) 12%,var(--bg))}
 body.is-dragging .gap-add{display:none}
-.r-sub .task{color:var(--c-change)}
+.r-sub .task,.r-plain .task{color:var(--c-change)}
+.r-plain{font-size:14px;line-height:1.6;color:var(--ink)}
+.r-plain .faint{color:var(--faint);font-size:12.5px}
+.row:not(.t-perform) .row-main{padding-top:10px;padding-bottom:10px}
+.row:not(.t-perform) .r-time,.row:not(.t-perform) .r-min{color:var(--muted);font-size:13.5px}
 .row.t-change .r-sub,.row.t-break .r-sub{white-space:normal}
 .setup{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .tog{font-size:12.5px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
@@ -192,6 +213,8 @@ body.is-dragging .gap-add{display:none}
   .row-main{grid-template-columns:46px 1fr auto;gap:10px}
   .editor{padding-left:4px}
   .grid3{grid-template-columns:1fr 1fr}
+  .types{flex-wrap:nowrap;overflow-x:auto;margin-right:-16px;padding-right:16px;scrollbar-width:none}
+  .types button{flex:none}
 }
 </style>
 </head>
@@ -217,13 +240,16 @@ body.is-dragging .gap-add{display:none}
         <div class="field"><label for="f-mc">司会者</label><input id="f-mc" data-info="mc" placeholder="例）放送部 山田さん"></div>
         <div class="field"><label for="f-tear">片付けにかかる時間（分）</label><input id="f-tear" data-info="teardown" inputmode="numeric" placeholder="30"></div>
       </div>
-      <div class="form-foot"><button class="btn primary" id="infoDone" type="button">閉じる</button></div>
+      <div class="form-foot"><button class="btn text danger" id="resetBtn" type="button">白紙に戻す</button><button class="btn primary" id="infoDone" type="button">閉じる</button></div>
     </div>
   </section>
 
-  <div class="status" id="status"><div class="status-in" id="statusIn"></div></div>
+  <div class="sample" id="sampleBar" hidden>記入例が入っています<button class="btn" id="blankBtn" type="button">白紙から始める</button><button class="x" id="sampleX" type="button" aria-label="このまま使う">×</button></div>
+
+  <div class="status" id="status"><button class="status-in" id="statusIn" type="button" aria-expanded="false"></button><div class="status-detail" id="statusDetail"></div></div>
 
   <ul class="list" id="list"></ul>
+  <p class="empty" id="emptyHint" hidden>下の欄に <b>合唱部 翼をください 村井邦彦 4</b> のように打って Enter。<br>何行かまとめて貼り付けても入ります。</p>
 </div>
 
 <div class="composer">
@@ -264,7 +290,7 @@ const SAMPLE_SETUPS = {
 function sampleConcert(){
   return {
     id:uid(), name:'第25回 音楽部 定期演奏会（記入例）', date:'2026-11-23', venue:'市民文化会館 大ホール',
-    doors:'13:00', start:'13:30', exit:'16:30', mc:'', teardown:30,
+    doors:'13:00', start:'13:30', exit:'16:30', mc:'', teardown:30, isSample:true,
     setups:JSON.parse(JSON.stringify(SAMPLE_SETUPS)),
     items:[
       newItem('announce',{min:2}),
@@ -296,7 +322,17 @@ state.setupMemory ||= {};
 for(const c of state.concerts){
   c.setups ||= {};
   // 以前の版で作った記入例にも配置の例を入れる
-  if(/（記入例）$/.test(c.name || '') && !Object.keys(c.setups).length){ c.setups = JSON.parse(JSON.stringify(SAMPLE_SETUPS)); c.teardown ??= 30; }
+  if(/（記入例）$/.test(c.name || '') && c.isSample === undefined){
+    c.isSample = true;
+    if(!Object.keys(c.setups).length) c.setups = JSON.parse(JSON.stringify(SAMPLE_SETUPS));
+    c.teardown ??= 30;
+  }
+}
+
+// 白紙の演奏会：影アナ・開会・閉会だけ
+function blankInto(c){
+  Object.assign(c, {name:'', date:'', venue:'', doors:'', start:'13:30', exit:'', mc:'', teardown:0, isSample:false, setups:{},
+    items:[newItem('announce'), newItem('open'), newItem('close')]});
 }
 
 function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
@@ -308,12 +344,13 @@ const cur = () => state.concerts.find(c => c.id === state.currentId) || state.co
 const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1])*60 + (+m[2]) : null; };
 const hm = m => { m = Math.round(m); m = ((m % 1440) + 1440) % 1440; return Math.floor(m/60) + ':' + String(m%60).padStart(2,'0'); };
 const dur = m => { m = Math.round(Math.abs(m)); const h = Math.floor(m/60), r = m%60; return h ? (r ? `${h}時間${r}分` : `${h}時間`) : `${r}分`; };
-// 4 / 4分 / 4:30 / 4分30秒 を「分」に直す
-const DUR_RE = /^(\d{1,3})(?:[:：](\d{1,2})|分(?:(\d{1,2})秒)?)?$/;
+// 4 / 4分 / 4:30 / 4'30" / 4分30秒 / 4分半 / 約4分 / (4分) を「分」に直す
+const DUR_BODY = String.raw`約?(\d{1,3})(?:[:：'’′](\d{1,2})["”″]?|分(?:(\d{1,2})秒|(半))?)?`;
+const DUR_RE = new RegExp(`^[（(]?${DUR_BODY}[）)]?$`);
 function readDur(t){
   const m = DUR_RE.exec(t || '');
   if(!m) return null;
-  return +m[1] + Math.min(59, +(m[2] || m[3] || 0)) / 60;
+  return +m[1] + (m[4] ? 0.5 : Math.min(59, +(m[2] || m[3] || 0)) / 60);
 }
 const minTxt = m => { const s = Math.round((+m || 0) * 60), r = s % 60; return r ? `${Math.floor(s/60)}:${String(r).padStart(2,'0')}` : String(s/60); };
 
@@ -391,11 +428,16 @@ const TITLE_TAIL_RE = /^(第.+|No\.?\s?\d+|Op\.?\s?\d+|.*楽章|.*番|.*組曲|�
 function parseLine(raw, prevGroup = ''){
   let s = z2h(raw).trim();
   if(!s) return null;
+  // 「合唱部／翼をください／4」のような区切り
+  if(/[\/／|｜]/.test(s) && !/[「『“"]/.test(s)) s = cellsToLine(s.split(/\s*[\/／|｜]\s*/));
+  // 「翼をください(4分)」のようなカッコ付きの時間は離して読む
+  s = s.replace(new RegExp(`\\s*[（(]\\s*(${DUR_BODY.replace(/\((?!\?)/g, '(?:')})\\s*[）)]`), ' $1');
   // 「休憩15」のように数字がくっついていても読めるように
   s = s.replace(/^(\S+?)(\d{1,3})分?$/, (m, w, n) => keywordType(w) ? `${w} ${n}` : m);
   // 「」で囲んだ曲名はスペースを含んでもひとかたまり
   let quoted = null;
-  s = s.replace(/[「『"“]([^」』"”]*)[」』"”]?/, (m, t) => { quoted = t.trim(); return ' \u0001 '; });
+  // （" は 4'30" の秒にも使うので、前後そろっているときだけ曲名とみなす）
+  s = s.replace(/[「『“]([^」』”]*)[」』”]?|"([^"]+)"/, (m, a, b) => { quoted = (a ?? b).trim(); return ' \u0001 '; });
   let toks = s.split(/\s+/).filter(Boolean);
   let min = null;
   if(toks.length > 1){
@@ -440,18 +482,19 @@ function parseLine(raw, prevGroup = ''){
 
 // 貼り付けた1行を、1行入力と同じ形にそろえる（Excelの列にも対応）
 const quoteIfSpace = t => /\s/.test(t) ? `「${t}」` : t;
+// 表の1行（団体｜曲名｜作曲者｜分）を1行入力の形にする
+function cellsToLine(cells){
+  cells = cells.map(x => x.trim()).filter(Boolean);
+  if(!cells.length) return '';
+  if(keywordType(z2h(cells[0])) || cells.length < 2) return cells.join(' ');
+  let min = '';
+  if(readDur(z2h(cells[cells.length-1])) !== null) min = cells.pop();
+  const [group, title = '', ...rest] = cells;
+  return [group.replace(/\s+/g, ''), title ? `「${title}」` : '', rest.join(' '), min].filter(Boolean).join(' ');
+}
 function normalizePasted(line){
   line = line.replace(/^\s*(?:[0-9０-９]{1,2}\s*[.．)）、]|[①-⑳]|[・•\-－*]|\(\d+\))\s*/, '');
-  if(line.includes('\t')){
-    const cells = line.split('\t').map(x => x.trim()).filter(Boolean);
-    if(!cells.length) return '';
-    if(keywordType(z2h(cells[0])) || cells.length < 2) return cells.join(' ');
-    let min = '';
-    if(readDur(z2h(cells[cells.length-1])) !== null) min = cells.pop();
-    const [group, title = '', ...rest] = cells;
-    return [quoteIfSpace(group), title ? `「${title}」` : '', rest.join(' '), min].filter(Boolean).join(' ');
-  }
-  return line.trim();
+  return line.includes('\t') ? cellsToLine(line.split('\t')) : line.trim();
 }
 const isHeaderLine = l => /曲名|団体名|作曲者|演目/.test(l) && !/\d/.test(z2h(l));
 
@@ -494,7 +537,19 @@ function renderInfo(){
     `<h1 class="info-name">${esc(c.name || '演奏会名を入力')}</h1>` +
     `<div class="info-meta">${meta.map(esc).join('<span class="sep">・</span>') || 'タップして日付・会場・時刻を入力'}</div>`;
   document.title = (c.name ? c.name + ' — ' : '') + '演奏会進行メーカー';
+  $('sampleBar').hidden = !c.isSample;
 }
+function resetConcert(msg){
+  const c = cur(), before = JSON.stringify(c);
+  blankInto(c);
+  openId = anchorId = null;
+  infoEl.classList.remove('open');
+  save(); renderInfo(); renderList(); renderPreview();
+  toast(msg, () => { Object.assign(c, JSON.parse(before)); save(); renderInfo(); renderList(); renderPreview(); });
+}
+$('blankBtn').addEventListener('click', () => { resetConcert('白紙にしました'); lineEl.focus(); });
+$('resetBtn').addEventListener('click', () => resetConcert('白紙に戻しました'));
+$('sampleX').addEventListener('click', () => { cur().isSample = false; save(); renderInfo(); });
 function openInfo(){
   const c = cur();
   document.querySelectorAll('[data-info]').forEach(el => el.value = c[el.dataset.info] ?? '');
@@ -519,21 +574,30 @@ let anchorId = null;   // ここの後に追加する（なければ閉会の前
 
 function rowMainHTML(it, ctx){
   const {map, plan} = ctx;
-  const t = map[it.id];
-  let sub = '', tasks = plan.tasks[it.id] || [];
-  if(it.type === 'perform') sub = esc([it.title ? it.group : '', it.composer].filter(Boolean).join('・'));
-  else if(it.type === 'announce') sub = '携帯電話・撮影のお願い';
-  else if(it.type === 'break') sub = `後半 ${hm(t.end)} 開始`;
-  if(tasks.length) sub += (sub ? '　' : '') + `<span class="task">${esc(tasks.join('・'))}</span>`;
-  if((it.type === 'change' || it.type === 'break') && it.crew) sub += (sub ? '　' : '') + esc(it.crew);
+  const t = map[it.id], tasks = plan.tasks[it.id] || [];
   const tags = (it.mc ? '<span class="tag">司会</span>' : '') + (it.crew && it.type !== 'change' && it.type !== 'break' ? '<span class="tag">裏方</span>' : '');
+  const taskHTML = tasks.length ? `<span class="task">${esc(tasks.join('・'))}</span>` : '';
+  let head, sub = '';
+  if(it.type === 'perform'){
+    // 演奏は曲名が主役。種類ラベルは付けない
+    head = `<div class="r-title">${esc(itemTitle(it))}</div>`;
+    sub = esc([it.title ? it.group : '', it.composer].filter(Boolean).join('・'));
+  }else{
+    // 進行の行は小さく。ラベルの横には中身だけ（「休憩 休憩」のような重複をしない）
+    let note = '';
+    if(it.type === 'speech') note = esc(it.group);
+    else if(it.type === 'other') note = esc(it.title);
+    else if(it.type === 'announce') note = '携帯電話・撮影のお願い';
+    else if(it.type === 'break') note = `後半 ${hm(t.end)} 開始`;
+    else if(it.type === 'change') note = taskHTML || '<span class="faint">作業内容は演奏の行の「ステージ配置」から</span>';
+    head = `<div class="r-plain"><span class="chip">${TYPE_LABEL[it.type]}</span>${note}</div>`;
+    if(it.type === 'break') sub = taskHTML;
+    if((it.type === 'change' || it.type === 'break') && it.crew) sub += (sub ? '　' : '') + esc(it.crew);
+  }
   const mt = minTxt(it.min);
   return `${plan.missing[it.id] ? '<button type="button" class="gap-add" data-act="addchange">＋ 転換</button>' : ''}
     <div class="r-time">${hm(t.start)}</div>
-    <div class="r-body">
-      <div class="r-title"><span class="chip">${TYPE_LABEL[it.type]}</span>${esc(itemTitle(it))}</div>
-      ${sub || tags ? `<div class="r-sub">${sub}${tags}</div>` : ''}
-    </div>
+    <div class="r-body">${head}${sub || tags ? `<div class="r-sub">${sub}${tags}</div>` : ''}</div>
     <div class="r-min">${mt}${mt.includes(':') ? '' : '<small>分</small>'}</div>
     <button class="r-del" type="button" data-act="del" aria-label="削除">×</button>`;
 }
@@ -587,9 +651,10 @@ function renderList(){
   listEl.innerHTML = c.items.map(it => `
     <li class="row t-${it.type}${it.id === openId ? ' open' : ''}" data-id="${it.id}">
       <div class="row-bg">削除</div>
-      <div class="row-main">${rowMainHTML(it, ctx)}</div>
+      <div class="row-main" tabindex="0">${rowMainHTML(it, ctx)}</div>
       ${it.id === openId ? `<div class="editor">${editorHTML(it, ctx)}</div>` : ''}
     </li>`).join('');
+  $('emptyHint').hidden = c.items.some(it => it.type === 'perform');
   refreshStatus();
 }
 
@@ -620,7 +685,35 @@ function refreshStatus(){
   }
   $('statusIn').innerHTML = html;
   $('status').classList.toggle('over', over);
+  if(statusOpen) $('statusDetail').innerHTML = breakdownHTML(c);
 }
+
+// 時間の内訳：オーバーしたとき、どこを削るか考える材料
+let statusOpen = false;
+function breakdownHTML(c){
+  const sum = {perform:0, change:0, break:0, etc:0}, cnt = {perform:0, change:0}, byGroup = new Map();
+  for(const it of c.items){
+    const m = +it.min || 0;
+    const k = it.type in sum ? it.type : 'etc';
+    sum[k] += m;
+    if(k in cnt) cnt[k]++;
+    if(it.type === 'perform') byGroup.set(it.group || '（団体なし）', (byGroup.get(it.group || '（団体なし）') || 0) + m);
+  }
+  const fm = m => minTxt(m).includes(':') ? minTxt(m).replace(':', '分') + '秒' : dur(m);
+  return `<div class="sum">
+      <span>演奏 ${cnt.perform}曲<b>${fm(sum.perform)}</b></span>
+      <span>転換 ${cnt.change}回<b>${fm(sum.change)}</b></span>
+      <span>休憩<b>${fm(sum.break)}</b></span>
+      <span>あいさつ・進行<b>${fm(sum.etc)}</b></span>
+    </div>` +
+    (byGroup.size ? `<div class="groups">${[...byGroup].map(([gname, m]) => `<span>${esc(gname)}<i>${fm(m)}</i></span>`).join('')}</div>` : '');
+}
+$('statusIn').addEventListener('click', () => {
+  statusOpen = !statusOpen;
+  $('status').classList.toggle('detail', statusOpen);
+  $('statusIn').setAttribute('aria-expanded', statusOpen);
+  refreshStatus();
+});
 
 const rowOf = id => listEl.querySelector(`.row[data-id="${id}"]`);
 const itemOf = id => cur().items.find(x => x.id === id);
@@ -726,6 +819,19 @@ listEl.addEventListener('change', e => {
   const it = itemOf(e.target.closest('.row').dataset.id);
   if(it.type === 'perform'){ rememberGroup(it.group); save(); }
 });
+// キーボードでも操作できるように：Enterで開く、Alt+↑↓で移動
+listEl.addEventListener('keydown', e => {
+  if(!e.target.classList.contains('row-main')) return;
+  const id = e.target.parentElement.dataset.id;
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleOpen(id); rowOf(id)?.querySelector('.row-main').focus(); }
+  else if(e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')){
+    e.preventDefault();
+    const items = cur().items, i = items.findIndex(x => x.id === id), j = i + (e.key === 'ArrowUp' ? -1 : 1);
+    if(j < 0 || j >= items.length) return;
+    [items[i], items[j]] = [items[j], items[i]];
+    save(); renderList(); rowOf(id).querySelector('.row-main').focus();
+  }
+});
 listEl.addEventListener('contextmenu', e => { if(e.target.closest('.row-main')) e.preventDefault(); });
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape'){
@@ -827,9 +933,17 @@ function dragEnd(){
     c.items.splice(g.to, 0, it);
     save();
   }
-  const id = g.id;
+  const id = g.id, from = g.idx, to = g.to;
   renderList();
-  if(g.to !== g.idx) flash(id);
+  if(to !== from){
+    flash(id);
+    toast(`「${itemTitle(itemOf(id))}」を移動しました`, () => {
+      const items = cur().items, i = items.findIndex(x => x.id === id);
+      if(i < 0) return;
+      items.splice(from, 0, ...items.splice(i, 1));
+      save(); renderList(); flash(id);
+    });
+  }
 }
 
 listEl.addEventListener('mousedown', e => {
@@ -1021,6 +1135,25 @@ lineEl.addEventListener('paste', e => {
   });
 });
 addBtn.addEventListener('click', () => { addLine(); lineEl.focus(); });
+
+/* ---- スマホのキーボード対策 ---- */
+const composerEl = document.querySelector('.composer');
+if(window.visualViewport){
+  const vv = window.visualViewport;
+  const fit = () => {
+    const off = innerHeight - vv.height - vv.offsetTop;
+    composerEl.style.transform = off > 1 ? `translateY(${-off}px)` : '';
+  };
+  vv.addEventListener('resize', fit);
+  vv.addEventListener('scroll', fit);
+}
+// 編集欄で文字を打っているあいだは、下の入力欄を隠して邪魔しない
+document.addEventListener('focusin', e => {
+  document.body.classList.toggle('typing-elsewhere', !!e.target.closest('.editor input, .editor textarea, .info-form input'));
+});
+document.addEventListener('focusout', () => setTimeout(() => {
+  if(!document.activeElement?.closest?.('.editor input, .editor textarea, .info-form input')) document.body.classList.remove('typing-elsewhere');
+}, 0));
 
 /* ============================================================
    はじめの表示
