@@ -3,6 +3,8 @@
 **ピッチが合うと最高に気持ちいい**、エンタメ特化型のWebチューナーです。
 `index.html` 1ファイルだけで動きます（インストール・ビルド不要）。
 
+> 🌸 **新しく追加：** ヴィヴァルディ「春」の鑑賞教材アプリ → [`vivaldi-spring/`](vivaldi-spring/README.md)
+
 ## 🚀 使い方
 
 1. `index.html` をダブルクリックしてブラウザ（Chrome / Edge / Safari / Firefox）で開く

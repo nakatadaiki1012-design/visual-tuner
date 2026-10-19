@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「春」鑑賞ノート</title>
+<meta name="description" content="ヴィヴァルディ「春」第1楽章を、先生の授業でも生徒ひとりでも学べる鑑賞教材アプリ">
+<style>
+:root{
+  --bg:#fffaf3; --panel:#ffffff; --ink:#2b2622; --sub:#6d635b; --line:#eadfd2;
+  --accent:#e2557a; --accent2:#3d9a6a; --soft:#fdeef2;
+  --theme:#f2a93b; --birds:#4fb3d9; --stream:#3d9a6a; --storm:#6b5fb5; --solo:#d9667f;
+  --shadow:0 2px 10px rgba(80,50,20,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1d1a18; --panel:#272320; --ink:#f3ece4; --sub:#b8ab9e; --line:#3d3631;
+    --soft:#3a2930; --shadow:0 2px 10px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1d1a18; --panel:#272320; --ink:#f3ece4; --sub:#b8ab9e; --line:#3d3631;
+  --soft:#3a2930; --shadow:0 2px 10px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","BIZ UDPGothic","Yu Gothic UI","Meiryo",sans-serif;line-height:1.7;font-size:17px;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+h1,h2,h3{line-height:1.35;margin:0 0 .5em}
+.hidden{display:none!important}
+
+/* ---------- header ---------- */
+header.top{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
+header.top .logo{font-weight:800;font-size:18px;white-space:nowrap;cursor:pointer}
+header.top .logo small{font-weight:600;color:var(--sub);font-size:13px;margin-left:6px}
+header.top .sp{flex:1}
+.modebtn{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 14px;font-size:14px;white-space:nowrap}
+.modebtn .sm{display:none}
+.modebtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ---------- home ---------- */
+.home{max-width:960px;margin:0 auto;padding:28px 16px 60px}
+.hero{text-align:center;padding:16px 0 24px}
+.hero h1{font-size:clamp(26px,5vw,40px);margin-bottom:.2em}
+.hero p{color:var(--sub);margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);text-align:left}
+.bigcard{cursor:pointer;transition:transform .15s}
+.bigcard:hover{transform:translateY(-3px)}
+.bigcard .ic{font-size:44px}
+.bigcard h2{font-size:22px;margin:.3em 0}
+.bigcard ul{margin:.4em 0 0;padding-left:1.2em;color:var(--sub);font-size:15px}
+.credit{font-size:13px;color:var(--sub);text-align:center;margin-top:26px}
+
+/* ---------- scene / player ---------- */
+.stage{position:relative;border-radius:16px;overflow:hidden;background:#cfe9ff;aspect-ratio:16/8;box-shadow:var(--shadow)}
+.stage canvas{width:100%;height:100%;display:block}
+.stage .caption{position:absolute;left:0;right:0;bottom:0;padding:12px 16px;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff}
+.stage .caption .nm{font-weight:800;font-size:clamp(18px,3vw,30px);text-shadow:0 1px 4px rgba(0,0,0,.5)}
+.stage .caption .poem{font-size:clamp(13px,1.8vw,19px);opacity:.95}
+.stage .badge{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.88);color:#333;border-radius:999px;padding:3px 12px;font-size:13px;font-weight:700}
+.stage .hidelbl{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:3px 12px;font-size:13px}
+
+.player{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow)}
+.prow{display:flex;align-items:center;gap:10px}
+.playbtn{width:52px;height:52px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:22px;flex:none;display:flex;align-items:center;justify-content:center}
+.time{font-variant-numeric:tabular-nums;font-size:14px;color:var(--sub);white-space:nowrap}
+.tl{position:relative;flex:1;height:64px;cursor:pointer;touch-action:none}
+.tl canvas{width:100%;height:100%;display:block}
+.tl .head{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);pointer-events:none}
+.smallbtn{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:5px 10px;font-size:14px;white-space:nowrap}
+.smallbtn.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--sub);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+
+.secbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.secbtn{border:2px solid transparent;border-radius:10px;padding:4px 10px;font-size:14px;background:var(--bg);border-color:var(--line)}
+.secbtn .n{font-weight:800;margin-right:4px}
+.secbtn.cur{border-color:var(--ink);font-weight:700}
+
+/* ---------- student layout ---------- */
+.stu{display:grid;grid-template-columns:230px 1fr;gap:18px;max-width:1200px;margin:0 auto;padding:16px 16px 190px}
+.steps{position:sticky;top:70px;align-self:start;display:flex;flex-direction:column;gap:6px}
+.step{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:9px 12px;font-size:15px}
+.step .no{width:26px;height:26px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:none}
+.step.on{border-color:var(--accent);background:var(--soft)}
+.step.done .no{background:var(--accent2);color:#fff}
+.step.done .no::after{content:"✓"}
+.step.done .no span{display:none}
+.main{min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);margin-bottom:16px}
+.panel h2{font-size:24px}
+.lead{color:var(--sub);margin-top:-.3em}
+.bottomplayer{position:fixed;left:0;right:0;bottom:0;z-index:15;padding:8px 16px calc(8px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+.bottomplayer .player{max-width:1200px;margin:0 auto}
+.nowsec{font-weight:700;font-size:15px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:5px 13px;font-size:15px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+textarea{width:100%;min-height:96px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg);resize:vertical}
+.btn{border:none;background:var(--accent);color:#fff;border-radius:12px;padding:10px 20px;font-weight:700;font-size:16px}
+.btn.sec{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.green{background:var(--accent2)}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+.note{background:var(--soft);border-radius:12px;padding:12px 14px;margin:12px 0;font-size:15px}
+.tip{font-size:14px;color:var(--sub)}
+
+.poemlist{display:flex;flex-direction:column;gap:8px}
+.poemline{border-left:6px solid var(--line);padding:6px 12px;border-radius:6px;background:var(--bg);cursor:pointer}
+.poemline .t{font-size:13px;color:var(--sub)}
+.poemline.cur{background:var(--soft)}
+.it{font-size:13px;color:var(--sub);font-style:italic}
+
+.quizopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px}
+.qopt{border:2px solid var(--line);background:var(--bg);border-radius:14px;padding:14px;font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px;text-align:left}
+.qopt .em{font-size:30px}
+.qopt.ok{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 15%,var(--bg))}
+.qopt.ng{border-color:#c44;opacity:.75}
+.fb{margin-top:12px;font-weight:700;min-height:1.7em}
+.score{font-size:15px;color:var(--sub)}
+
+.tapbig{width:100%;padding:26px;font-size:26px;font-weight:800;border-radius:20px;border:none;background:var(--theme);color:#3a2500;margin-top:10px;user-select:none;-webkit-user-select:none}
+.tapbig:active{transform:scale(.98)}
+.tapbig:disabled{opacity:.45}
+
+.elgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
+.elopt{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 10px;font-size:15px;text-align:left}
+.elopt.on{border-color:var(--accent)}
+.elopt.right{border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 15%,var(--bg))}
+.elopt.wrong{border-color:#c44;text-decoration:line-through;opacity:.7}
+.elopt.miss{border-style:dashed;border-color:var(--accent2)}
+
+.formfig{display:flex;gap:3px;margin:12px 0;flex-wrap:wrap}
+.formfig div{padding:6px 4px;border-radius:8px;text-align:center;font-size:12px;font-weight:700;color:#222;flex:1 1 60px;min-width:56px}
+
+/* ---------- teacher ---------- */
+.tch{max-width:1300px;margin:0 auto;padding:12px 16px 40px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:7px 14px;font-size:15px}
+.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tgrid{display:grid;grid-template-columns:1fr 320px;gap:14px}
+.tside{display:flex;flex-direction:column;gap:12px}
+.tside .card{padding:14px}
+.tside h3{font-size:16px}
+.keys{font-size:13px;color:var(--sub)}
+.keys kbd{border:1px solid var(--line);border-radius:5px;padding:0 5px;background:var(--bg);font-family:inherit}
+.big{font-size:20px}
+.guide h3{margin-top:1.2em;font-size:19px}
+.guide table{border-collapse:collapse;width:100%;font-size:15px}
+.guide td,.guide th{border:1px solid var(--line);padding:8px;vertical-align:top;text-align:left}
+.guide th{background:var(--soft)}
+.settbl{width:100%;border-collapse:collapse;font-size:15px}
+.settbl td{border-bottom:1px solid var(--line);padding:6px 4px}
+.settbl input{width:80px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;background:var(--bg)}
+.answer{background:var(--soft);border-radius:12px;padding:12px 14px;margin-top:10px}
+
+body.present header.top,body.present .tabs,body.present .tside{display:none}
+body.present .tgrid{grid-template-columns:1fr}
+body.present .tch{max-width:none}
+
+@media (max-width:860px){
+  .stu{grid-template-columns:1fr;padding-bottom:200px}
+  .steps{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .step{flex:none}
+  .step .lbl{display:none}
+  .step.on .lbl{display:inline}
+  .tgrid{grid-template-columns:1fr}
+  .tl{height:52px}
+  header.top .logo small{display:none}
+}
+@media (max-width:480px){
+  body{font-size:16px}
+  .playbtn{width:44px;height:44px;font-size:18px}
+  .time{display:none}
+  .panel{padding:16px}
+  .modebtn{padding:5px 10px;font-size:13px}
+  .modebtn .lg{display:none} .modebtn .sm{display:inline}
+  header.top{gap:6px}
+}
+
+/* ---------- print (worksheet) ---------- */
+#printsheet{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printsheet,#printsheet *{visibility:visible}
+  #printsheet{display:block;position:absolute;left:0;top:0;width:100%;color:#000;background:#fff;font-size:12pt;padding:0 6mm}
+  #printsheet h1{font-size:17pt}
+  #printsheet .box{border:1px solid #555;border-radius:4px;min-height:28mm;padding:6px 8px;margin:4px 0 10px;white-space:pre-wrap}
+  #printsheet .box.tall{min-height:50mm}
+  #printsheet table{border-collapse:collapse;width:100%}
+  #printsheet td,#printsheet th{border:1px solid #555;padding:4px 6px;font-size:10.5pt;vertical-align:top}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo" id="logo">🌸 「春」鑑賞ノート<small>ヴィヴァルディ《四季》より 第1楽章</small></div>
+  <div class="sp"></div>
+  <button class="modebtn" data-mode="student">🧑‍🎓 <span class="lg">ひとりで学ぶ</span><span class="sm">生徒</span></button>
+  <button class="modebtn" data-mode="teacher">🧑‍🏫 <span class="lg">授業で使う</span><span class="sm">先生</span></button>
+</header>
+
+<!-- ======================= HOME ======================= -->
+<section id="home" class="home">
+  <div class="hero">
+    <h1>🌸 ヴィヴァルディ「春」を聴こう</h1>
+    <p>協奏曲集《四季》より「春」第1楽章（約3分）</p>
+  </div>
+  <div class="cards">
+    <div class="card bigcard" data-go="student">
+      <div class="ic">🧑‍🎓</div>
+      <h2>ひとりで学ぶ</h2>
+      <p>6つのステップで、自分のペースで進めます。</p>
+      <ul>
+        <li>まず聴いて、感じたことを書く</li>
+        <li>ソネット（詩）と音楽を結びつける</li>
+        <li>クイズ・ゲームで場面と主題を聴き分ける</li>
+        <li>最後に「紹介文」を書いて印刷・保存</li>
+      </ul>
+    </div>
+    <div class="card bigcard" data-go="teacher">
+      <div class="ic">🧑‍🏫</div>
+      <h2>授業で使う（先生用）</h2>
+      <p>テレビや電子黒板に映して、授業を進めます。</p>
+      <ul>
+        <li>大きな画面で場面ごとに再生・くり返し</li>
+        <li>場面名を<b>かくして</b>「何の場面？」と問える</li>
+        <li>クラス全員でのクイズ（答えはボタンで表示）</li>
+        <li>指導の流れ・発問例・ワークシート印刷</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px">
+    <h3>この曲について</h3>
+    <p style="margin:0">《四季》は、イタリアの作曲家 <b>アントニオ・ヴィヴァルディ</b>（1678〜1741）が作ったヴァイオリン協奏曲集です。
+    「春」「夏」「秋」「冬」の4曲それぞれに<b>ソネット（14行の詩）</b>がついていて、詩に書かれた場面が音で表されています。
+    「春」第1楽章では、<b>春の主題</b>（合奏でくり返し出てくるメロディー）の間に、小鳥・泉・雷などの場面がはさまる <b>リトルネロ形式</b> で作られています。</p>
+  </div>
+  <p class="credit">音源：ルイス・カウフマン（独奏ヴァイオリン）／ヘンリー・スウォボダ指揮 コンサートホール室内管弦楽団（1947年録音）<br>
+  場面の時間は、この録音に合わせてあります。別の録音を使うときは先生用の「設定」で直せます。</p>
+</section>
+
+<!-- ======================= STUDENT ======================= -->
+<section id="student" class="hidden">
+  <div class="stu">
+    <nav class="steps" id="steps"></nav>
+    <div class="main" id="stuMain"></div>
+  </div>
+  <div class="bottomplayer"><div class="player" id="stuPlayer"></div></div>
+</section>
+
+<!-- ======================= TEACHER ======================= -->
+<section id="teacher" class="hidden">
+  <div class="tch">
+    <div class="tabs" id="ttabs">
+      <button class="tab on" data-t="show">📺 提示画面</button>
+      <button class="tab" data-t="quiz">❓ みんなでクイズ</button>
+      <button class="tab" data-t="tap">🌸 主題さがしゲーム</button>
+      <button class="tab" data-t="guide">📋 指導の流れ</button>
+      <button class="tab" data-t="settings">⚙️ 設定</button>
+    </div>
+
+    <div id="t-show">
+      <div class="tgrid">
+        <div>
+          <div class="stage" id="tStage"><canvas></canvas><div class="badge"></div><div class="hidelbl hidden">場面名をかくしています</div><div class="caption"><div class="nm"></div><div class="poem"></div></div></div>
+          <div class="player" id="tPlayer" style="margin-top:10px"></div>
+        </div>
+        <div class="tside">
+          <div class="card">
+            <h3>見せ方</h3>
+            <div class="btnrow" style="margin-top:4px">
+              <button class="smallbtn" id="tHide">🙈 場面名をかくす</button>
+              <button class="smallbtn" id="tPoem">📜 詩を表示</button>
+              <button class="smallbtn" id="tFull">⛶ 大きく映す</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>いまの場面の聴きどころ</h3>
+            <div id="tPoint" style="font-size:15px"></div>
+          </div>
+          <div class="card keys">
+            <b>キーボード操作</b><br>
+            <kbd>Space</kbd> 再生/一時停止　<kbd>←</kbd><kbd>→</kbd> 前/次の場面<br>
+            <kbd>1</kbd>〜<kbd>9</kbd>,<kbd>0</kbd> 場面へジャンプ　<kbd>L</kbd> 場面をくり返す<br>
+            <kbd>H</kbd> 場面名をかくす　<kbd>F</kbd> 大きく映す（<kbd>Esc</kbd>でもどる）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="t-quiz" class="hidden">
+      <div class="panel">
+        <h2>❓ みんなでクイズ「どの場面かな？」</h2>
+        <p class="lead">曲の一部を流します。生徒に考えさせてから「答えを見る」を押してください。</p>
+        <div id="tQuiz"></div>
+      </div>
+    </div>
+
+    <div id="t-tap" class="hidden">
+      <div class="panel">
+        <h2>🌸 主題さがしゲーム（クラス版）</h2>
+        <p class="lead">曲を最初から流します。「春の主題がもどってきた！」と思ったら、生徒に手を挙げさせましょう。先生がボタンを押すと記録されます。</p>
+        <div id="tTap"></div>
+      </div>
+    </div>
+
+    <div id="t-guide" class="hidden">
+      <div class="panel guide" id="tGuide"></div>
+    </div>
+
+    <div id="t-settings" class="hidden">
+      <div class="panel">
+        <h2>⚙️ 設定</h2>
+        <h3>場面の開始時間</h3>
+        <p class="tip">録音によって演奏の速さが違うため、場面の始まりがずれることがあります。曲を再生して、場面が変わったところで「いまの位置」を押すと合わせられます。変更はこのブラウザに保存されます。</p>
+        <table class="settbl" id="setTbl"></table>
+        <div class="btnrow">
+          <button class="btn sec" id="setReset">最初の時間にもどす</button>
+        </div>
+        <h3 style="margin-top:1.4em">別の録音を使う</h3>
+        <p class="tip">手元の音声ファイル（mp3など）を読み込めます。読み込んだら、上の表で場面の時間を合わせてください。ファイルはこの画面の中だけで使われ、どこにも送られません。</p>
+        <input type="file" id="fileIn" accept="audio/*">
+        <h3 style="margin-top:1.4em">ワークシート</h3>
+        <div class="btnrow"><button class="btn sec" id="printBlank">🖨 白紙のワークシートを印刷</button></div>
+        <h3 style="margin-top:1.4em">表示</h3>
+        <div class="btnrow">
+          <button class="smallbtn" data-themeset="">自動</button>
+          <button class="smallbtn" data-themeset="light">明るい</button>
+          <button class="smallbtn" data-themeset="dark">暗い</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="printsheet"></div>
+<audio id="au" src="spring.mp3" preload="auto"></audio>
+
+<script>
+"use strict";
+/* ================= データ ================= */
+const ENV = [12,37,23,19,24,36,26,24,18,22,40,44,42,31,24,60,61,55,49,47,50,58,35,37,39,44,37,33,31,40,26,28,50,42,41,31,25,59,73,67,57,54,51,41,37,48,32,23,36,30,22,32,37,38,32,22,34,27,23,51,55,38,39,27,29,15,10,12,10,6,10,8,6,7,7,12,14,10,7,6,10,27,33,23,18,12,16,11,7,14,12,9,16,10,7,7,5,13,11,9,9,10,21,35,35,28,14,12,15,16,16,17,19,16,21,14,13,16,15,14,10,14,13,8,19,28,22,14,10,7,7,5,24,41,23,54,78,67,45,36,49,70,32,49,40,23,37,44,27,41,59,48,41,36,24,28,22,49,62,50,43,41,38,55,32,52,35,17,61,46,32,60,60,62,39,27,27,27,28,61,49,46,58,43,52,47,44,41,39,33,28,30,22,31,19,30,32,26,34,32,23,29,32,25,25,21,13,10,8,9,8,6,21,22,16,10,8,9,10,8,13,8,6,18,13,8,22,27,19,18,13,10,10,8,14,27,15,16,16,13,16,8,20,15,8,20,25,20,28,35,31,31,27,19,18,17,25,44,16,40,52,46,47,36,16,26,30,17,25,23,19,38,17,17,18,15,16,14,10,23,28,21,20,11,8,10,17,16,10,5,13,14,12,10,6,6,14,15,14,7,4,12,14,14,12,5,6,16,18,17,10,4,13,18,5,7,12,5,16,10,3,24,7,9,21,5,9,14,4,14,15,7,17,4,11,21,4,11,16,7,21,10,11,33,11,21,13,10,21,10,25,38,52,48,43,15,10,11,8,14,17,7,10,4,3,3,3,3,3,2,4,3,3,3,3,2,3,2,3,3,2,5,4,3,4,3,2,3,1,5,2,3,6,4,6,10,11,10,10,6,5,6,8,10,8,8,13,8,5,4,5,5,4,6,4,6,7,7,10,8,7,13,13,10,10,10,13,14,10,15,10,9,17,14,15,15,13,19,16,13,14,12,15,19,16,14,13,13,17,12,13,10,8,34,46,33,26,19,18,19,10,29,19,23,27,28,23,17,18,16,12,13,22,14,14,25,17,13,28,20,32,32,17,49,32,46,48,19,60,47,47,63,21,57,32,47,35,18,14,14,12,24,18,12,13,9,8,12,11,10,9,5,15,11,9,9,7,9,9,7,9,7,6,13,11,8,12,8,10,11,8,7,8,15,22,11,8,8,6,12,6,4,6,8,7,7,5,5,6,3,7,8,7,7,8,7,8,6,5,4,8,12,7,6,5,10,10,9,7,4,7,10,11,11,10,10,6,7,8,8,5,5,6,6,7,4,3,3,2,2,20,43,22,71,90,72,56,42,37,63,47,38,41,25,20,60,26,46,74,53,51,29,21,26,22,39,93,76,64,42,28,63,60,40,43,22,24,37,21,45,58,51,58,41,26,27,17,35,50,33,42,52,48,51,28,23,37,26,23,28,26,28,15,16,21,19,16,14,8,8,13,11,9,12,13,10,10,12,10,11,8,10,8,7,11,15,11,12,16,17,14,10,14,16,15,21,18,18,26,18,15,14,12,14,13,11,22,20,15,20,19,15,15,13,16,11,17,19,14,15,13,12,10,11,11,10,10,17,16,16,12,12,15,12,9,15,10,13,18,12,13,13,12,14,13,21,22,15,25,18,13,11,13,15,10,9,14,17,12,15,12,13,15,12,13,13,16,14,15,22,18,32,31,19,19,20,14,14,21,20,26,22,34,19,22,25,19,20,12,14,23,20,17,22,20,26,22,15,15,14,14,14,17,11,12,12,12,16,18,14,17,25,25,25,32,26,30,24,23,19,20,20,23,24,15,19,15,21,17,16,15,15,34,25,14,34,15,16,19,17,16,15,13,27,21,20,28,23,18,20,18,29,19,17,32,28,29,34,25,26,28,33,35,28,20,30,25,28,28,16,21,20,17,17,18,12,16,16,13,13,10,12,8,6,59,31,16,41,54,44,34,36,43,56,34,41,30,33,50,40,43,37,35,41,38,30,65,47,29,48,52,40,32,30,35,36,47,39,31,45,69,47,36,35,41,44,48,49,58,35,35,51,42,38,38,40,35,21,44,39,19,58,58,47,47,39,75,99,45,51,26,27,44,53,72,67,61,73,71,71,73,78,68,64,65,60,69,70,72,83,79,70,50,33,51,78,64,51,51,30,47,55,50,37,24,35,52,54,41,51,46,53,62,39,21,21,52,71,79,73,66,70,73,66,66,59,71,79,86,77,74,73,70,78,77,79,76,79,91,76,81,61,44,27,57,28,33,35,22,78,43,47,31,34,14,76,32,30,17,22,31,23,24,12,11,15,16,24,23,21,35,39,33,33,25,25,20,23,24,8,16,27,27,19,14,13,7,33,21,24,24,12,24,24,22,23,23,25,28,23,23,24,36,62,80,62,52,33,28,34,16,13,11,14,11,11,8,7,8,16,33,14,7,10,36,76,72,42,37,57,43,36,38,29,30,36,41,33,25,18,15,22,18,13,9,14,36,45,30,29,25,30,40,27,22,25,29,38,42,28,25,16,34,24,20,17,9,77,34,35,24,27,60,65,37,22,20,16,44,38,33,26,19,42,29,19,14,14,19,22,18,18,20,23,30,26,30,42,31,32,34,40,36,33,26,36,46,37,54,46,51,60,52,64,50,42,39,51,45,38,28,57,55,48,38,30,27,20,15,17,42,16,29,59,49,38,41,34,38,49,34,35,22,60,50,29,39,36,35,38,33,32,34,21,32,63,47,30,27,26,43,41,42,37,23,64,53,36,38,29,44,43,33,39,33,28,71,68,47,35,31,38,31,37,45,26,27,39,43,36,27,27,38,29,21,21,13,14,15,18,20,21,15,12,10,8,9,10,9,11,9,6,8,7,7,10,5,8,9,10,21,20,8,19,13,7,15,9,11,14,5,17,37,10,24,28,13,17,10,10,11,5,8,8,10,9,10,9,14,17,12,14,17,11,15,14,10,19,21,16,25,21,12,9,7,8,7,5,6,6,6,9,9,9,13,13,11,15,19,16,19,23,15,12,13,10,10,11,7,9,9,9,13,9,11,18,20,18,15,18,20,14,13,10,12,11,13,15,13,13,13,11,8,6,9,10,9,11,10,10,10,8,10,9,9,9,10,11,15,18,15,14,16,15,14,14,16,15,15,17,19,16,15,15,22,21,28,32,31,29,30,35,37,42,36,23,33,38,18,29,41,39,43,40,45,37,34,48,63,40,43,32,34,67,25,45,53,29,34,31,22,44,34,28,35,33,39,33,24,48,41,26,31,38,30,26,23,40,33,39,41,46,40,38,32,65,56,69,49,40,38,33,30,35,36,38,41,29,30,31,31,54,37,29,46,37,44,82,60,55,42,36,33,27,35,45,21,35,32,27,27,27,50,35,23,37,24,42,69,53,38,23,22,33,37,25,23,26,17,14,12,12,17,16,12,15,13,10,23,14,13,18,20,16,19,17,12,20,14,12,9,9,12,15,14,15,14,14,27,17,17,17,24,20,18,17,16,15,16,25,29,25,24,30,50,54,56,61,64,48,62,80,80,94,83,51,24,24,29,58,62,40,33,30,28,39,24,35,20,31,21,26,25,57,43,30,32,34,54,25,39,46,17,54,15,38,38,24,40,32,36,53,38,69,29,43,35,25,20,17,16,13,18,23,19,15,10,9,43,36,31,26,27,55,43,38,37,37,24,36,28,33,48,39,46,23,27,32,22,17,57,58,47,37,27,52,50,40,39,23,34,43,21,47,42,40,39,46,25,24,17,37,36,43,45,45,56,39,29,42,34,22,43,27,27,27,20,25,25,17,27,23,26,39,36,26,20,15,10,8,8,10,5,7,21,19,14,11,8,18,12,9,16,9,13,14,7,11,18,16,24,15,12,12,6,13,35,26,17,13,10,16,11,13,13,8,14,23,17,14,21,21,22,17,10,13,8,16,36,22,32,42,37,41,30,26,33,78,46,27,41,52,49,37,47,74,39,34,23,36,38,32,28,31,34,41,50,53,44,41,40,38,40,38,52,60,65,49,41,52,55,60,62,52,43,42,43,40,38,39,36,44,51,52,54,48,41,41,43,43,47,48,38,27,17,18,12,8,5,4,4,3,2,1,1,0,0]; // 0.1秒ごとの音の大きさ（0〜99）
+const ENV_RATE = 10;
+
+const KIND = {
+  theme:  {label:"春の主題", color:"var(--theme)",  hex:"#f2a93b", emoji:"🌸"},
+  birds:  {label:"小鳥の歌", color:"var(--birds)",  hex:"#4fb3d9", emoji:"🐦"},
+  stream: {label:"泉とそよ風", color:"var(--stream)", hex:"#3d9a6a", emoji:"💧"},
+  storm:  {label:"雷と稲妻", color:"var(--storm)",  hex:"#6b5fb5", emoji:"⚡"},
+  solo:   {label:"独奏ヴァイオリン", color:"var(--solo)", hex:"#d9667f", emoji:"🎻"},
+};
+
+const DEFAULT_SECTIONS = [
+  {t:0,     kind:"theme",  name:"春の主題",           poem:"春がやってきた",
+   point:"合奏（全員）で明るく元気に始まります。同じフレーズを<b>強く→弱く</b>（こだまのように）くり返すところに注目。これが<b>春の主題（リトルネロ）</b>で、このあと何度ももどってきます。"},
+  {t:28,    kind:"birds",  name:"小鳥の歌",           poem:"小鳥たちは楽しい歌で春にあいさつする",
+   point:"<b>独奏ヴァイオリン</b>と2人のヴァイオリンが、<b>高い音</b>で<b>トリル</b>（細かくふるわせる音）やさえずりを表します。低い楽器はお休みして、音がうすく、軽やかになります。"},
+  {t:58.8,  kind:"theme",  name:"春の主題",           poem:"（春の主題がもどってくる）",
+   point:"春の主題が<b>短く</b>もどってきます。全部ではなく一部だけが出てくるのがポイント。"},
+  {t:65.5,  kind:"stream", name:"泉とそよ風",         poem:"泉はそよ風にふかれ、やさしくささやきながら流れ出す",
+   point:"弦楽器が<b>細かい音をなめらかにくり返し</b>、さらさら流れる水を表します。<b>弱い音</b>でやわらかく、そよ風のような雰囲気です。"},
+  {t:87.2,  kind:"theme",  name:"春の主題",           poem:"（春の主題がもどってくる）",
+   point:"ふたたび春の主題。泉の場面とくらべると、音の<b>強さ</b>や<b>厚み</b>のちがいがよく分かります。"},
+  {t:93.5,  kind:"storm",  name:"雷と稲妻",           poem:"やがて空は黒い雲におおわれ、稲妻と雷鳴が春の訪れを告げる",
+   point:"合奏が<b>トレモロ</b>（同じ音をとても速くきざむ）で雷のゴロゴロを表し、独奏ヴァイオリンが<b>速くかけ上がる音階</b>で稲妻を表します。<b>強弱</b>の変化がはげしい場面です。"},
+  {t:119,   kind:"theme",  name:"春の主題（短調）",    poem:"（嵐のあと、主題がもどってくる）",
+   point:"春の主題ですが、<b>短調</b>になって少しかげりのあるひびきに。嵐のなごりを感じられます。"},
+  {t:126,   kind:"birds",  name:"小鳥がふたたび歌う",  poem:"嵐がおさまると、小鳥たちはふたたび美しい歌を歌い始める",
+   point:"嵐が去り、小鳥がまた歌い出します。最初の小鳥の場面と<b>くらべて</b>聴いてみましょう。長くのばす音（トリル）が印象的です。"},
+  {t:142,   kind:"theme",  name:"春の主題",           poem:"（春の主題がもどってくる）",
+   point:"明るい長調の春の主題にもどります。"},
+  {t:152,   kind:"solo",   name:"独奏ヴァイオリン",    poem:"（独奏ヴァイオリンの見せ場）",
+   point:"<b>独奏ヴァイオリン</b>が目立つ短い部分。協奏曲では、独奏と合奏が<b>かけ合う</b>のが聴きどころです。"},
+  {t:160,   kind:"theme",  name:"春の主題（おわり）",   poem:"（春の主題で曲をしめくくる）",
+   point:"最後の春の主題。はじめと同じように<b>強く→弱く（こだま）→強く</b>と変化して、明るく曲を終えます。"},
+];
+
+// 稲妻（独奏ヴァイオリンのかけ上がる音階）が鳴るおおよその時刻：場面の開始からの秒数
+const LIGHTNING_OFFSETS = [8.5, 11.5, 14.7, 21.6];
+
+const ELEMENTS = {
+  birds:  {q:"「小鳥の歌」で使われている工夫はどれ？（あてはまるものを全部）",
+    opts:[["高い音が多い",1],["トリル（音を細かくふるわせる）",1],["低い楽器も全員で演奏",0],["音が軽やかでうすい",1],["とても強く重い音",0],["ゆっくり長い低音",0]],
+    exp:"小鳥の場面では低い楽器がお休みし、ヴァイオリンだけが高い音でトリルやさえずりを演奏します。そのため、音が軽く、明るく聞こえます。"},
+  stream: {q:"「泉とそよ風」で使われている工夫はどれ？",
+    opts:[["細かい音がなめらかに続く",1],["弱い音でやわらかい",1],["速い音階がかけ上がる",0],["同じ形をくり返して流れを表す",1],["とつぜん強い音が鳴る",0],["高い音のトリルだけ",0]],
+    exp:"細かい音をなめらかにくり返すことで、さらさら流れる水やそよ風を表しています。強弱は弱めで、やさしい雰囲気です。"},
+  storm:  {q:"「雷と稲妻」で使われている工夫はどれ？",
+    opts:[["トレモロ（同じ音を速くきざむ）",1],["速くかけ上がる音階",1],["強い音と激しい変化",1],["ゆったりした弱い音だけ",0],["小鳥のようなさえずり",0],["明るくのびやかなメロディー",0]],
+    exp:"合奏のトレモロが雷のゴロゴロを、独奏ヴァイオリンのかけ上がる速い音階が稲妻のピカッを表しています。"},
+  theme:  {q:"「春の主題」の特徴はどれ？",
+    opts:[["合奏（全員）で演奏",1],["明るい長調",1],["強く→弱く（こだま）の変化",1],["独奏ヴァイオリンだけで演奏",0],["暗く重々しい",0],["一度しか出てこない",0]],
+    exp:"春の主題は合奏で明るく演奏され、同じフレーズを強く→弱くとこだまのようにくり返します。曲の中で何度ももどってくるのがリトルネロ形式の特徴です。"},
+};
+
+const FEEL_WORDS = ["明るい","楽しい","軽やか","はずむ","さわやか","あたたかい","にぎやか","かわいらしい","やさしい","おだやか","なめらか","さらさら","はげしい","こわい","力強い","どきどきする","堂々とした","晴れやか"];
+
+/* ================= 保存 ================= */
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("vspring:"+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("vspring:"+k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem("vspring:"+k); }catch(e){} },
+};
+
+let SECTIONS = DEFAULT_SECTIONS.map(s => ({...s}));
+(function loadTimes(){
+  const saved = store.get("times", null);
+  if (Array.isArray(saved) && saved.length === SECTIONS.length) saved.forEach((t,i) => { if (typeof t === "number") SECTIONS[i].t = t; });
+})();
+let env = ENV;
+
+/* ================= 音声 ================= */
+const au = document.getElementById("au");
+let loopSec = -1;        // くり返し中の場面
+let stopAt = null;       // クリップ再生の終了時刻
+let onClipEnd = null;
+function dur(){ return isFinite(au.duration) && au.duration > 0 ? au.duration : env.length / ENV_RATE; }
+function secEnd(i){ return i + 1 < SECTIONS.length ? SECTIONS[i+1].t : dur(); }
+function secAt(t){ let k = 0; for (let i = 0; i < SECTIONS.length; i++) if (t >= SECTIONS[i].t - 0.01) k = i; return k; }
+function play(){ const p = au.play(); if (p && p.catch) p.catch(()=>{}); }
+function pause(){ au.pause(); }
+function toggle(){ au.paused ? play() : pause(); }
+function seek(t){ au.currentTime = Math.max(0, Math.min(dur() - 0.05, t)); }
+function jump(i, autoplay=true){ i = Math.max(0, Math.min(SECTIONS.length-1, i)); stopAt = null; seek(SECTIONS[i].t); if (loopSec >= 0) loopSec = i; if (autoplay) play(); }
+function playClip(from, len, cb){ stopAt = from + len; onClipEnd = cb || null; loopSec = -1; seek(from); play(); }
+function fmt(t){ t = Math.max(0, t|0); return (t/60|0) + ":" + String(t%60).padStart(2,"0"); }
+function envAt(t){ const i = Math.floor(t * ENV_RATE); return (env[i] || 0) / 99; }
+
+au.addEventListener("timeupdate", guardTime);
+function guardTime(){
+  const t = au.currentTime;
+  if (stopAt != null && t >= stopAt){ stopAt = null; pause(); const cb = onClipEnd; onClipEnd = null; if (cb) cb(); }
+  if (loopSec >= 0 && t >= secEnd(loopSec) - 0.15){ seek(SECTIONS[loopSec].t); }
+}
+
+/* ================= プレーヤー部品 ================= */
+const players = [];
+function makePlayer(el, opts={}){
+  el.innerHTML = `
+    ${opts.nowLabel ? '<div class="nowsec"></div>' : ''}
+    <div class="prow">
+      <button class="playbtn" aria-label="再生">▶</button>
+      <div class="tl"><canvas></canvas><div class="head"></div></div>
+      <span class="time">0:00 / 0:00</span>
+    </div>
+    <div class="prow" style="margin-top:6px;flex-wrap:wrap;gap:6px">
+      <button class="smallbtn" data-a="prev">⏮ 前の場面</button>
+      <button class="smallbtn" data-a="next">次の場面 ⏭</button>
+      <button class="smallbtn" data-a="loop">🔁 この場面をくり返す</button>
+      ${opts.legend ? '<div class="legend" style="margin:0 0 0 auto"></div>' : ''}
+    </div>
+    ${opts.secButtons ? '<div class="secbtns"></div>' : ''}`;
+  const P = {el, opts, cv: el.querySelector(".tl canvas"), tl: el.querySelector(".tl"), head: el.querySelector(".head"),
+    btn: el.querySelector(".playbtn"), time: el.querySelector(".time"), now: el.querySelector(".nowsec"),
+    loopBtn: el.querySelector('[data-a="loop"]'), secs: el.querySelector(".secbtns"), legend: el.querySelector(".legend"), lastSec:-2};
+  P.btn.onclick = () => { stopAt = null; toggle(); };
+  el.querySelector('[data-a="prev"]').onclick = () => { const i = secAt(au.currentTime); jump(au.currentTime - SECTIONS[i].t > 2 ? i : i - 1); };
+  el.querySelector('[data-a="next"]').onclick = () => jump(secAt(au.currentTime) + 1);
+  P.loopBtn.onclick = () => { loopSec = loopSec >= 0 ? -1 : secAt(au.currentTime); };
+  let drag = false;
+  const seekFromEv = e => { const r = P.tl.getBoundingClientRect(); stopAt = null; seek((e.clientX - r.left) / r.width * dur()); };
+  P.tl.addEventListener("pointerdown", e => { drag = true; P.tl.setPointerCapture(e.pointerId); seekFromEv(e); });
+  P.tl.addEventListener("pointermove", e => { if (drag) seekFromEv(e); });
+  P.tl.addEventListener("pointerup", () => drag = false);
+  if (P.legend) P.legend.innerHTML = Object.values(KIND).map(k => `<span><i style="background:${k.color}"></i>${k.label}</span>`).join("");
+  P.hideNames = () => !!opts.hideNames && opts.hideNames();
+  players.push(P);
+  buildSecButtons(P);
+  drawTimeline(P);
+  return P;
+}
+function buildSecButtons(P){
+  if (!P.secs) return;
+  const hide = P.hideNames();
+  P.secs.innerHTML = SECTIONS.map((s,i) => `<button class="secbtn" data-i="${i}" style="border-left:8px solid ${KIND[s.kind].color}"><span class="n">${(i+1)%10 === 0 && i === 9 ? "0" : i+1}</span>${hide ? "場面" + (i+1) : s.name}</button>`).join("");
+  P.secs.querySelectorAll(".secbtn").forEach(b => b.onclick = () => jump(+b.dataset.i));
+  P.lastSec = -2;
+}
+function drawTimeline(P){
+  const c = P.cv, dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  c.width = w * dpr; c.height = h * dpr;
+  const g = c.getContext("2d"); g.scale(dpr, dpr);
+  const D = dur(), hide = P.hideNames();
+  SECTIONS.forEach((s,i) => {
+    const x0 = s.t / D * w, x1 = secEnd(i) / D * w;
+    g.fillStyle = hide ? (i % 2 ? "#bbb" : "#ccc") : KIND[s.kind].hex;
+    g.globalAlpha = .28; g.fillRect(x0, 0, x1 - x0, h);
+    g.globalAlpha = 1; g.fillRect(x0, h - 6, x1 - x0, 6);
+    g.fillStyle = "rgba(0,0,0,.25)"; g.fillRect(x0, 0, 1, h);
+    if (!hide && x1 - x0 > 16){ g.font = "14px sans-serif"; g.textBaseline = "top"; g.fillText(KIND[s.kind].emoji, x0 + 3, 3); }
+  });
+  const cs = getComputedStyle(document.documentElement);
+  g.fillStyle = cs.getPropertyValue("--sub").trim() || "#777";
+  g.globalAlpha = .75;
+  const n = Math.floor(w), mid = (h - 6) / 2 + 6;
+  for (let x = 0; x < n; x += 2){
+    const t0 = x / w * D, t1 = (x + 2) / w * D;
+    let m = 0; for (let t = t0; t < t1; t += 1/ENV_RATE) m = Math.max(m, envAt(t));
+    const a = Math.max(1, m * (h - 26) / 2);
+    g.fillRect(x, mid - a + 4, 1.4, a * 2);
+  }
+  g.globalAlpha = 1;
+}
+function updatePlayers(){
+  const t = au.currentTime, D = dur(), si = secAt(t);
+  for (const P of players){
+    if (!P.el.offsetParent) continue;
+    P.head.style.left = (t / D * 100) + "%";
+    P.btn.textContent = au.paused ? "▶" : "❚❚";
+    P.time.textContent = fmt(t) + " / " + fmt(D);
+    P.loopBtn.classList.toggle("on", loopSec >= 0);
+    P.loopBtn.textContent = loopSec >= 0 ? "🔁 くり返し中（場面" + (loopSec+1) + "）" : "🔁 この場面をくり返す";
+    if (P.lastSec !== si){
+      P.lastSec = si;
+      if (P.now){ const s = SECTIONS[si]; P.now.textContent = P.hideNames() ? `場面${si+1}` : `${KIND[s.kind].emoji} 場面${si+1}：${s.name}`; }
+      if (P.secs) P.secs.querySelectorAll(".secbtn").forEach(b => b.classList.toggle("cur", +b.dataset.i === si));
+    }
+  }
+}
+window.addEventListener("resize", () => { players.forEach(drawTimeline); scenes.forEach(sc => sc.resize()); });
+
+/* ================= 情景アニメーション ================= */
+const scenes = [];
+function makeScene(stageEl, opts={}){
+  const cv = stageEl.querySelector("canvas"), g = cv.getContext("2d");
+  const S = {stageEl, cv, g, opts, w:0, h:0, birds:[], drops:[], petals:[], notes:[], flash:0, lastLightning:-1, mix:{sky:[150,205,255]}, lastSec:-1};
+  for (let i = 0; i < 6; i++) S.birds.push({x:Math.random(), y:.15 + Math.random()*.35, v:.0015 + Math.random()*.002, ph:Math.random()*6});
+  for (let i = 0; i < 26; i++) S.petals.push({x:Math.random(), y:Math.random(), v:.0006 + Math.random()*.001, ph:Math.random()*6});
+  for (let i = 0; i < 120; i++) S.drops.push({x:Math.random(), y:Math.random(), v:.012 + Math.random()*.01});
+  S.resize = () => { const dpr = window.devicePixelRatio || 1; S.w = cv.clientWidth; S.h = cv.clientHeight; cv.width = S.w * dpr; cv.height = S.h * dpr; g.setTransform(dpr,0,0,dpr,0,0); };
+  S.resize();
+  scenes.push(S);
+  return S;
+}
+const SKY = {theme:[150,210,255], birds:[175,225,255], stream:[170,220,235], storm:[60,60,90], solo:[255,205,170]};
+function lerp(a,b,k){ return a + (b-a)*k; }
+function drawScene(S, now){
+  if (!S.stageEl.offsetParent) return;
+  if (!S.w) S.resize();
+  const {g, w, h} = S, t = au.currentTime, si = secAt(t), sec = SECTIONS[si], kind = sec.kind, amp = au.paused ? 0.15 : envAt(t);
+  const target = SKY[kind]; S.mix.sky = S.mix.sky.map((v,i) => lerp(v, target[i], .04));
+  const [r,gg,b] = S.mix.sky.map(v => v|0);
+  const sky = g.createLinearGradient(0,0,0,h);
+  sky.addColorStop(0, `rgb(${r},${gg},${b})`); sky.addColorStop(1, `rgb(${Math.min(255,r+50)},${Math.min(255,gg+30)},${Math.min(255,b+10)})`);
+  g.fillStyle = sky; g.fillRect(0,0,w,h);
+  const stormK = Math.max(0, 1 - (S.mix.sky[0] - 60) / 90);
+  // 太陽
+  g.globalAlpha = 1 - stormK;
+  g.fillStyle = "#ffd65a"; g.beginPath(); g.arc(w*.85, h*.2, h*(.09 + amp*.03), 0, 7); g.fill();
+  g.strokeStyle = "#ffd65a"; g.lineWidth = 3;
+  for (let i = 0; i < 12; i++){ const a = i/12*6.283 + now/3000; const r0 = h*.13, r1 = h*(.16 + amp*.05); g.beginPath(); g.moveTo(w*.85 + Math.cos(a)*r0, h*.2 + Math.sin(a)*r0); g.lineTo(w*.85 + Math.cos(a)*r1, h*.2 + Math.sin(a)*r1); g.stroke(); }
+  g.globalAlpha = 1;
+  // 雲
+  const cloudCol = `rgba(${lerp(255,70,stormK)|0},${lerp(255,70,stormK)|0},${lerp(255,90,stormK)|0},.95)`;
+  for (let i = 0; i < 4; i++){
+    const cx = ((i*.3 + now/60000*(1+i*.3)) % 1.3 - .15) * w, cy = h*(.12 + (i%2)*.1), s = h*(.06 + stormK*.05);
+    g.fillStyle = cloudCol; g.beginPath(); g.arc(cx, cy, s, 0, 7); g.arc(cx + s, cy - s*.4, s*1.1, 0, 7); g.arc(cx + s*2, cy, s*.9, 0, 7); g.fill();
+  }
+  // 丘
+  g.fillStyle = `rgb(${lerp(120,50,stormK)|0},${lerp(195,90,stormK)|0},${lerp(100,70,stormK)|0})`;
+  g.beginPath(); g.moveTo(0,h); g.lineTo(0,h*.72); g.quadraticCurveTo(w*.3,h*.55,w*.6,h*.7); g.quadraticCurveTo(w*.85,h*.8,w,h*.66); g.lineTo(w,h); g.fill();
+  g.fillStyle = `rgb(${lerp(95,40,stormK)|0},${lerp(170,75,stormK)|0},${lerp(85,60,stormK)|0})`;
+  g.beginPath(); g.moveTo(0,h); g.lineTo(0,h*.85); g.quadraticCurveTo(w*.5,h*.74,w,h*.86); g.lineTo(w,h); g.fill();
+  // 小川
+  const streamK = kind === "stream" ? 1 : .35;
+  g.strokeStyle = `rgba(90,170,230,${.5 + streamK*.4})`; g.lineWidth = h*.05;
+  g.beginPath(); for (let x = 0; x <= w; x += 8){ const y = h*.92 + Math.sin(x/60 + now/700)*h*.012; x ? g.lineTo(x,y) : g.moveTo(x,y); } g.stroke();
+  if (kind === "stream"){
+    g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 2;
+    for (let i = 0; i < 14; i++){ const x = ((i/14 + now/5000) % 1) * w; g.beginPath(); g.moveTo(x, h*.92); g.lineTo(x + 20, h*.92); g.stroke(); }
+    g.strokeStyle = "rgba(255,255,255,.6)"; g.lineWidth = 2;
+    for (let i = 0; i < 6; i++){ const y = h*(.3 + i*.07), x = ((i*.17 + now/(2500 - amp*1200)) % 1.2 - .1) * w;
+      g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x+40, y-10, x+80, y+10, x+130, y); g.stroke(); }
+  }
+  // 花
+  for (let i = 0; i < 9; i++){
+    const x = w*(.05 + i*.11), y = h*(.8 + (i%3)*.035), sway = Math.sin(now/600 + i)*(3 + amp*8);
+    g.strokeStyle = "#3e8a3a"; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y + 18); g.lineTo(x + sway, y); g.stroke();
+    g.fillStyle = ["#ff8fb1","#ffd54f","#fff","#ffa26b"][i%4]; const pr = 5 + amp*4 * (1 - stormK);
+    for (let k = 0; k < 5; k++){ const a = k/5*6.283; g.beginPath(); g.arc(x + sway + Math.cos(a)*pr, y + Math.sin(a)*pr, pr*.7, 0, 7); g.fill(); }
+    g.fillStyle = "#c77d00"; g.beginPath(); g.arc(x + sway, y, pr*.55, 0, 7); g.fill();
+  }
+  // 花びら（主題）
+  if (kind === "theme" || kind === "solo"){
+    for (const p of S.petals){ p.y += p.v*(1 + amp*2); p.x += Math.sin(now/900 + p.ph)*.0008; if (p.y > 1){ p.y = -.05; p.x = Math.random(); }
+      g.fillStyle = "rgba(255,170,200,.85)"; g.beginPath(); g.ellipse(p.x*w, p.y*h, 5, 3, now/500 + p.ph, 0, 7); g.fill(); }
+  }
+  // 小鳥
+  const birdK = kind === "birds" ? 1 : (kind === "theme" ? .4 : 0);
+  if (birdK > 0){
+    S.birds.forEach((bd, i) => {
+      if (i >= Math.round(S.birds.length * birdK)) return;
+      bd.x += bd.v; if (bd.x > 1.08) { bd.x = -.08; bd.y = .15 + Math.random()*.35; }
+      const x = bd.x*w, y = bd.y*h + Math.sin(now/300 + bd.ph)*8, wing = Math.sin(now/90 + bd.ph)*8;
+      g.fillStyle = ["#4a7bd0","#e2557a","#f2a93b"][i%3];
+      g.beginPath(); g.ellipse(x, y, 13, 9, 0, 0, 7); g.fill();
+      g.beginPath(); g.arc(x + 11, y - 5, 6.5, 0, 7); g.fill();
+      g.fillStyle = "#f7b733"; g.beginPath(); g.moveTo(x + 17, y - 6); g.lineTo(x + 24, y - 4); g.lineTo(x + 17, y - 2); g.fill();
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(x + 13, y - 7, 1.8, 0, 7); g.fill();
+      g.fillStyle = "rgba(0,0,0,.25)"; g.beginPath(); g.moveTo(x - 3, y - 2); g.lineTo(x - 10, y - 12 - wing); g.lineTo(x + 6, y - 3); g.fill();
+      if (kind === "birds" && !au.paused && Math.random() < .03 + amp*.08) S.notes.push({x:x + 20, y:y - 14, life:1, c:"♪♫"[i%2]});
+    });
+  }
+  // 音符
+  if (!au.paused && kind === "theme" && Math.random() < amp*.25) S.notes.push({x:Math.random()*w, y:h*.7, life:1, c:"♪♫♩"[Math.random()*3|0]});
+  if (!au.paused && kind === "solo" && Math.random() < .08 + amp*.2) S.notes.push({x:w*.5 + (Math.random()-.5)*w*.3, y:h*.6, life:1, c:"♪♫"[Math.random()*2|0]});
+  g.font = `${Math.round(h*.06)}px sans-serif`;
+  S.notes = S.notes.filter(n => (n.life -= .012) > 0);
+  for (const n of S.notes){ n.y -= 1.2; n.x += Math.sin(n.life*10)*.6; g.globalAlpha = n.life; g.fillStyle = kind === "birds" ? "#2b5aa6" : "#8a3b00"; g.fillText(n.c, n.x, n.y); }
+  g.globalAlpha = 1;
+  // 独奏のスポットライト
+  if (kind === "solo"){
+    const sp = g.createRadialGradient(w*.5, h*.62, 5, w*.5, h*.62, h*.45);
+    sp.addColorStop(0, "rgba(255,255,220,.55)"); sp.addColorStop(1, "rgba(255,255,220,0)");
+    g.fillStyle = sp; g.fillRect(0,0,w,h);
+    g.font = `${Math.round(h*.22)}px sans-serif`; g.textAlign = "center"; g.fillText("🎻", w*.5, h*.72 + Math.sin(now/300)*4); g.textAlign = "left";
+  }
+  // 雨と稲妻
+  if (stormK > .3){
+    g.strokeStyle = `rgba(200,210,255,${.5*stormK})`; g.lineWidth = 1.3;
+    for (const d of S.drops){ d.y += d.v*(1 + amp); d.x -= .002; if (d.y > 1){ d.y = 0; d.x = Math.random()*1.1; } g.beginPath(); g.moveTo(d.x*w, d.y*h); g.lineTo(d.x*w - 4, d.y*h + 14); g.stroke(); }
+  }
+  if (kind === "storm"){
+    const rel = t - sec.t;
+    LIGHTNING_OFFSETS.forEach((o, k) => { if (rel >= o && rel < o + .4 && S.lastLightning !== k){ S.lastLightning = k; S.flash = 1; S.bolt = makeBolt(w, h); } });
+    if (!au.paused && amp > .85 && Math.random() < .02){ S.flash = .7; S.bolt = makeBolt(w, h); }
+  } else S.lastLightning = -1;
+  if (S.flash > 0){
+    g.fillStyle = `rgba(255,255,240,${S.flash*.55})`; g.fillRect(0,0,w,h);
+    if (S.bolt){ g.strokeStyle = `rgba(255,250,180,${S.flash})`; g.lineWidth = 4; g.beginPath(); S.bolt.forEach((p,i) => i ? g.lineTo(p[0],p[1]) : g.moveTo(p[0],p[1])); g.stroke(); }
+    S.flash -= .04;
+  }
+  // 画面をゆらす（雷）
+  if (kind === "storm" && !au.paused) S.stageEl.style.transform = `translate(${(Math.random()-.5)*amp*4}px,${(Math.random()-.5)*amp*3}px)`;
+  else if (S.stageEl.style.transform) S.stageEl.style.transform = "";
+
+  // キャプション
+  if (S.lastSec !== si || S.dirty){
+    S.lastSec = si; S.dirty = false;
+    const hide = S.opts.hideNames && S.opts.hideNames();
+    const showPoem = !S.opts.showPoem || S.opts.showPoem();
+    S.stageEl.querySelector(".badge").textContent = `場面 ${si+1} / ${SECTIONS.length}`;
+    S.stageEl.querySelector(".nm").textContent = hide ? "？？？" : `${KIND[kind].emoji} ${sec.name}`;
+    S.stageEl.querySelector(".poem").textContent = hide || !showPoem ? "" : sec.poem;
+    const hl = S.stageEl.querySelector(".hidelbl"); if (hl) hl.classList.toggle("hidden", !hide);
+    if (S.opts.onSection) S.opts.onSection(si);
+  }
+}
+function makeBolt(w, h){ let x = w*(.2 + Math.random()*.6), y = 0; const pts = [[x,y]]; while (y < h*.6){ y += h*.07; x += (Math.random()-.5)*w*.06; pts.push([x,y]); } return pts; }
+
+function loop(now){
+  updatePlayers();
+  scenes.forEach(S => drawScene(S, now));
+  tick.forEach(f => f());
+  requestAnimationFrame(loop);
+}
+const tick = [];
+
+/* ================= 画面切りかえ ================= */
+const views = {home:document.getElementById("home"), student:document.getElementById("student"), teacher:document.getElementById("teacher")};
+let mode = "home";
+function setMode(m){
+  mode = m; pause(); stopAt = null; loopSec = -1;
+  Object.entries(views).forEach(([k,el]) => el.classList.toggle("hidden", k !== m));
+  document.querySelectorAll(".modebtn").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+  document.body.classList.remove("present");
+  if (m === "student") renderStep(curStep);
+  if (m === "teacher") showTab(curTab);
+  store.set("mode", m);
+  requestAnimationFrame(() => { players.forEach(drawTimeline); scenes.forEach(sc => { sc.resize(); sc.dirty = true; }); });
+  window.scrollTo(0,0);
+}
+document.querySelectorAll(".modebtn").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => setMode(b.dataset.go));
+document.getElementById("logo").onclick = () => setMode("home");
+
+/* ================= 生徒モード ================= */
+const STEPS = [
+  {id:"listen",  title:"まず聴いてみよう"},
+  {id:"poem",    title:"詩と音楽"},
+  {id:"which",   title:"場面あてクイズ"},
+  {id:"form",    title:"主題をさがせ"},
+  {id:"elem",    title:"音楽のしくみ"},
+  {id:"write",   title:"紹介文を書こう"},
+];
+let curStep = store.get("step", 0);
+let done = store.get("done", {});
+let notes = store.get("notes", {feel1:[], feel1txt:"", feel2:[], fav:"", why:"", intro:""});
+function saveNotes(){ store.set("notes", notes); }
+function markDone(id){ done[id] = true; store.set("done", done); renderStepNav(); }
+
+const stuMain = document.getElementById("stuMain");
+let stuScene = null;
+const stuPlayer = makePlayer(document.getElementById("stuPlayer"), {nowLabel:true, hideNames:() => stuHide});
+let stuHide = false;
+
+function renderStepNav(){
+  document.getElementById("steps").innerHTML = STEPS.map((s,i) => `<button class="step ${i===curStep?'on':''} ${done[s.id]?'done':''}" data-i="${i}"><span class="no"><span>${i+1}</span></span><span class="lbl">${s.title}</span></button>`).join("");
+  document.querySelectorAll("#steps .step").forEach(b => b.onclick = () => renderStep(+b.dataset.i));
+}
+function stageHTML(){ return `<div class="stage"><canvas></canvas><div class="badge"></div><div class="hidelbl hidden">場面名はまだひみつ</div><div class="caption"><div class="nm"></div><div class="poem"></div></div></div>`; }
+function setStuHide(v){ stuHide = v; buildSecButtons(stuPlayer); drawTimeline(stuPlayer); stuPlayer.lastSec = -2; if (stuScene) stuScene.dirty = true; }
+function attachStuScene(container, opts={}){
+  container.innerHTML = stageHTML();
+  stuScene = makeScene(container.querySelector(".stage"), {hideNames:() => stuHide, ...opts});
+}
+function navBtns(i){
+  return `<div class="btnrow" style="justify-content:space-between">
+    ${i > 0 ? `<button class="btn sec" data-nav="${i-1}">← もどる</button>` : '<span></span>'}
+    ${i < STEPS.length-1 ? `<button class="btn" data-nav="${i+1}">次へ →</button>` : ''}</div>`;
+}
+function renderStep(i){
+  curStep = i; store.set("step", i);
+  pause(); stopAt = null; loopSec = -1; tapState = null;
+  if (stuScene){ scenes.splice(scenes.indexOf(stuScene), 1); stuScene = null; }
+  renderStepNav();
+  const s = STEPS[i];
+  let html = "";
+  if (s.id === "listen"){
+    html = `<div class="panel"><h2>① まず聴いてみよう</h2>
+      <p class="lead">何も知らないまま、まずは曲を<b>最後まで</b>聴いてみましょう。下の ▶ ボタンで再生できます。</p>
+      <div class="note">🎧 聴きながら考えよう：どんな景色が見える？ 気分はどう変わる？</div>
+      <div id="listenStage"></div>
+      <h3 style="margin-top:1em">感じたことに近いことばを選ぼう（いくつでも）</h3>
+      <div class="chips" id="feel1"></div>
+      <h3>思いうかんだ景色や、気づいたことを書こう</h3>
+      <textarea id="feel1txt" placeholder="例：鳥が鳴いているみたいなところがあった。とちゅうで急にはげしくなった。"></textarea>
+      ${navBtns(i)}</div>`;
+  } else if (s.id === "poem"){
+    html = `<div class="panel"><h2>② 詩と音楽をむすびつけよう</h2>
+      <p class="lead">ヴィヴァルディは「春」に<b>ソネット（14行の詩）</b>をつけました。第1楽章には、次のような場面がえがかれています。</p>
+      <div id="poemStage"></div>
+      <div class="note">📜 詩の行をタップすると、その場面の音楽が流れます。<b>音のどんなところ</b>が詩の場面に合っているか、考えながら聴こう。</div>
+      <div class="poemlist" id="poemlist"></div>
+      <p class="it" style="margin-top:12px">原文（イタリア語）の書き出し：Giunt' è la Primavera e festosetti / La salutan gl' augei con lieto canto…</p>
+      ${navBtns(i)}</div>`;
+  } else if (s.id === "which"){
+    html = `<div class="panel"><h2>③ 場面あてクイズ</h2>
+      <p class="lead">曲の一部が流れます。どの場面か当ててみよう！ 全部で5問です。</p>
+      <div id="quizBox"></div>
+      ${navBtns(i)}</div>`;
+  } else if (s.id === "form"){
+    html = `<div class="panel"><h2>④ 主題をさがせ！（リトルネロ形式）</h2>
+      <p class="lead">この曲では、はじめに出てくる<b>春の主題</b>が、場面と場面のあいだに何度も<b>もどってきます</b>。このような作り方を<b>リトルネロ形式</b>といいます（リトルネロ＝「もどってくるもの」という意味）。</p>
+      <div class="formfig">${SECTIONS.map(s => `<div style="background:${KIND[s.kind].hex};flex-grow:${Math.max(1,(secEnd(SECTIONS.indexOf(s)) - s.t)/10)}">${KIND[s.kind].emoji}<br>${s.kind==="theme" ? "主題" : KIND[s.kind].label}</div>`).join("")}</div>
+      <h3>ゲーム：主題がもどってきたらボタンを押そう</h3>
+      <p class="tip">曲が最初から流れます（はじめの主題は練習です）。<b>小鳥・泉・雷などの場面が終わって、春の主題がもどってきた！</b>と思ったら、すぐに 🌸 ボタンを押してください。</p>
+      <div id="tapBox"></div>
+      ${navBtns(i)}</div>`;
+  } else if (s.id === "elem"){
+    html = `<div class="panel"><h2>⑤ 音楽のしくみを見つけよう</h2>
+      <p class="lead">それぞれの場面は、どんな<b>音楽の工夫</b>で表されているのかな？ 場面を聴いて、あてはまるものを選ぼう。</p>
+      <div id="elemBox"></div>
+      ${navBtns(i)}</div>`;
+  } else if (s.id === "write"){
+    html = `<div class="panel"><h2>⑥ 「春」の紹介文を書こう</h2>
+      <p class="lead">学んだことを使って、この曲を知らない人に紹介する文章を書こう。</p>
+      <h3>もう一度、最後まで聴いて感じたことば</h3>
+      <div class="chips" id="feel2"></div>
+      <div class="note" id="beforeAfter"></div>
+      <h3>いちばん好きな場面</h3>
+      <div class="chips" id="favs"></div>
+      <h3>その理由（音楽の工夫を使って）</h3>
+      <p class="tip">使えることば：強弱・音の高さ・速さ・音色・トリル・トレモロ・音階・独奏と合奏・長調と短調・リトルネロ形式</p>
+      <textarea id="why" placeholder="例：雷の場面が好き。合奏のトレモロでゴロゴロ鳴る雷と、独奏ヴァイオリンの速い音階の稲妻が、本当に嵐が来たみたいだから。"></textarea>
+      <h3>紹介文</h3>
+      <textarea id="intro" style="min-height:150px" placeholder="例：ヴィヴァルディの「春」は、春の主題が何度ももどってくるリトルネロ形式で作られています。主題の間には小鳥の歌や…"></textarea>
+      <div class="btnrow">
+        <button class="btn green" id="printMine">🖨 印刷する／PDFで保存</button>
+        <button class="btn sec" id="copyMine">📋 文章をコピー</button>
+        <span class="tip" id="copyMsg"></span>
+      </div>
+      <p class="tip">書いた内容は、このブラウザに自動で保存されます。</p>
+      <div class="btnrow"><button class="btn sec" id="resetAll">はじめからやり直す（記録を消す）</button></div>
+      ${navBtns(i)}</div>`;
+  }
+  stuMain.innerHTML = html;
+  stuMain.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => { markDone(STEPS[curStep].id); renderStep(+b.dataset.nav); window.scrollTo(0,0); });
+  setStuHide(s.id === "listen" || s.id === "which" || s.id === "form");
+
+  if (s.id === "listen"){
+    attachStuScene(document.getElementById("listenStage"));
+    chipGroup(document.getElementById("feel1"), FEEL_WORDS, notes.feel1, v => { notes.feel1 = v; saveNotes(); });
+    bindText("feel1txt", "feel1txt");
+  }
+  if (s.id === "poem"){
+    attachStuScene(document.getElementById("poemStage"), {onSection: si => {
+      document.querySelectorAll("#poemlist .poemline").forEach(el => el.classList.toggle("cur", +el.dataset.i === si));
+    }});
+    document.getElementById("poemlist").innerHTML = SECTIONS.map((s,i) => s.kind === "theme" && i > 0 ? "" :
+      `<div class="poemline" data-i="${i}" style="border-left-color:${KIND[s.kind].hex}"><div class="t">${KIND[s.kind].emoji} ${s.name}（${fmt(s.t)}〜）</div>${s.poem}</div>`).join("");
+    document.querySelectorAll("#poemlist .poemline").forEach(el => el.onclick = () => jump(+el.dataset.i));
+  }
+  if (s.id === "which") startQuiz(document.getElementById("quizBox"), false);
+  if (s.id === "form") startTap(document.getElementById("tapBox"), false);
+  if (s.id === "elem") renderElements(document.getElementById("elemBox"));
+  if (s.id === "write"){
+    chipGroup(document.getElementById("feel2"), FEEL_WORDS, notes.feel2, v => { notes.feel2 = v; saveNotes(); showBA(); });
+    const favOpts = ["春の主題","小鳥の歌","泉とそよ風","雷と稲妻","小鳥がふたたび歌う","独奏ヴァイオリン"];
+    chipGroup(document.getElementById("favs"), favOpts, notes.fav ? [notes.fav] : [], v => { notes.fav = v[v.length-1] || ""; saveNotes(); }, true);
+    bindText("why","why"); bindText("intro","intro");
+    showBA();
+    document.getElementById("printMine").onclick = () => { markDone("write"); printSheet(true); };
+    document.getElementById("copyMine").onclick = () => {
+      const txt = `【ヴィヴァルディ「春」紹介文】\n${notes.intro}\n\nいちばん好きな場面：${notes.fav}\n理由：${notes.why}`;
+      const ok = () => document.getElementById("copyMsg").textContent = "コピーしました";
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok, () => {});
+    };
+    document.getElementById("resetAll").onclick = () => {
+      if (!confirm("書いた内容やクイズの記録をすべて消して、はじめからやり直しますか？")) return;
+      ["notes","done","step","quizBest","tapBest","elem"].forEach(k => store.del(k));
+      notes = {feel1:[], feel1txt:"", feel2:[], fav:"", why:"", intro:""}; done = {}; renderStep(0);
+    };
+  }
+}
+function showBA(){
+  const el = document.getElementById("beforeAfter"); if (!el) return;
+  el.innerHTML = `<b>はじめに聴いたとき：</b>${notes.feel1.join("・") || "（まだ選んでいません）"}<br><b>いま：</b>${notes.feel2.join("・") || "（上から選ぼう）"}<br><span class="tip">感じ方は変わったかな？ 新しく気づいたことを紹介文に入れよう。</span>`;
+}
+function chipGroup(el, words, sel, onChange, single=false){
+  el.innerHTML = words.map(w => `<button class="chip ${sel.includes(w)?'on':''}">${w}</button>`).join("");
+  el.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+    const w = b.textContent;
+    if (single){ sel.length = 0; sel.push(w); }
+    else { const k = sel.indexOf(w); k >= 0 ? sel.splice(k,1) : sel.push(w); }
+    el.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", sel.includes(c.textContent)));
+    onChange(sel.slice());
+  });
+}
+function bindText(id, key){ const el = document.getElementById(id); el.value = notes[key] || ""; el.oninput = () => { notes[key] = el.value; saveNotes(); }; }
+
+/* ---------- 場面あてクイズ（生徒・先生共通） ---------- */
+const QUIZ_KINDS = ["theme","birds","stream","storm"];
+function quizPool(){
+  // 各場面から聴き分けやすい8秒を選ぶ
+  const pool = [];
+  SECTIONS.forEach((s,i) => { if (!QUIZ_KINDS.includes(s.kind)) return; const len = secEnd(i) - s.t; if (len < 6) return;
+    pool.push({i, kind:s.kind, from:s.t + Math.min(2, len*.15), len:Math.min(8, len - 1)}); });
+  return pool;
+}
+function shuffle(a){ for (let i = a.length-1; i > 0; i--){ const j = Math.random()*(i+1)|0; [a[i],a[j]] = [a[j],a[i]]; } return a; }
+function startQuiz(box, teacher){
+  const pool = quizPool();
+  const N = 5;
+  let qs = shuffle(pool.slice());
+  // 種類がかたよらないように並べなおす
+  const byKind = {}; qs.forEach(q => (byKind[q.kind] ||= []).push(q));
+  const order = []; while (order.length < N){ for (const k of shuffle(QUIZ_KINDS.slice())) { if (byKind[k] && byKind[k].length) order.push(byKind[k].shift()); if (order.length >= N) break; } if (!Object.values(byKind).some(a => a.length)) break; }
+  qs = order;
+  let n = 0, score = 0, answered = false;
+  const render = () => {
+    if (n >= qs.length){
+      const best = Math.max(score, store.get("quizBest", 0)); if (!teacher) store.set("quizBest", best);
+      box.innerHTML = `<div class="answer big">${teacher ? "クイズ終了！" : `結果：${qs.length}問中 <b>${score}問</b> 正解！ ${score === qs.length ? "🎉 パーフェクト！" : score >= 3 ? "👏 よく聴けています！" : "🌱 ②にもどって場面を聴き直してみよう"}`}</div>
+        <div class="btnrow"><button class="btn" id="qAgain">もう一度</button></div>`;
+      box.querySelector("#qAgain").onclick = () => startQuiz(box, teacher);
+      if (!teacher && score >= 3) markDone("which");
+      return;
+    }
+    const q = qs[n]; answered = false;
+    box.innerHTML = `<div class="score">第${n+1}問 / ${qs.length}${teacher ? "" : `　正解 ${score}`}</div>
+      <div class="btnrow"><button class="btn" id="qPlay">▶ 曲を流す</button><span class="tip">何度でも聴けます</span></div>
+      <div class="quizopts">${QUIZ_KINDS.map(k => `<button class="qopt" data-k="${k}"><span class="em">${KIND[k].emoji}</span>${KIND[k].label}</button>`).join("")}</div>
+      <div class="fb"></div>
+      <div class="btnrow">${teacher ? '<button class="btn green" id="qShow">答えを見る</button>' : ''}<button class="btn sec hidden" id="qNext">次の問題 →</button></div>`;
+    const fb = box.querySelector(".fb");
+    box.querySelector("#qPlay").onclick = () => playClip(q.from, q.len);
+    const reveal = (pick) => {
+      if (answered) return; answered = true;
+      box.querySelectorAll(".qopt").forEach(b => { if (b.dataset.k === q.kind) b.classList.add("ok"); else if (b.dataset.k === pick) b.classList.add("ng"); });
+      const right = pick === q.kind || pick == null;
+      if (pick && pick === q.kind) score++;
+      if (!teacher) box.querySelector(".score").textContent = `第${n+1}問 / ${qs.length}　正解 ${score}`;
+      const hint = {theme:"合奏全員で明るく、はっきりしたメロディー。", birds:"高い音のトリルやさえずり。低い楽器がお休み。", stream:"細かい音がなめらかに続く、やわらかい音。", storm:"トレモロと速い音階、はげしい強弱。"}[q.kind];
+      fb.innerHTML = (pick == null ? `答え：${KIND[q.kind].emoji} ${KIND[q.kind].label}` : right ? `⭕ 正解！ ${KIND[q.kind].label}` : `❌ 答えは ${KIND[q.kind].emoji} ${KIND[q.kind].label}`) + `<div class="tip" style="font-weight:400">ヒント：${hint}</div>`;
+      box.querySelector("#qNext").classList.remove("hidden");
+      const sh = box.querySelector("#qShow"); if (sh) sh.classList.add("hidden");
+    };
+    box.querySelectorAll(".qopt").forEach(b => b.onclick = () => { if (!teacher) reveal(b.dataset.k); else { box.querySelectorAll(".qopt").forEach(x => x.style.outline = ""); b.style.outline = "3px solid var(--accent)"; } });
+    const sh = box.querySelector("#qShow"); if (sh) sh.onclick = () => reveal(null);
+    box.querySelector("#qNext").onclick = () => { pause(); n++; render(); };
+  };
+  render();
+}
+
+/* ---------- 主題さがしゲーム ---------- */
+let tapState = null;
+function startTap(box, teacher){
+  const targets = SECTIONS.map((s,i) => ({t:s.t, i})).filter((x,k) => SECTIONS[x.i].kind === "theme" && x.i > 0);
+  box.innerHTML = `<div class="btnrow"><button class="btn" id="tapStart">▶ ゲームスタート（最初から再生）</button><button class="btn sec hidden" id="tapStop">■ やめる</button></div>
+    <button class="tapbig" id="tapBtn" disabled>🌸 主題がもどってきた！</button>
+    <div class="fb" id="tapFb"></div><div id="tapRes"></div>`;
+  const btn = box.querySelector("#tapBtn"), fb = box.querySelector("#tapFb"), res = box.querySelector("#tapRes");
+  const finish = () => {
+    if (!tapState) return;
+    const st = tapState; tapState = null; pause(); btn.disabled = true;
+    box.querySelector("#tapStop").classList.add("hidden");
+    const found = targets.map(tg => st.taps.find(x => x >= tg.t - 1.5 && x <= tg.t + 5));
+    const hit = found.filter(Boolean).length;
+    const miss = st.taps.filter(x => !targets.some(tg => x >= tg.t - 1.5 && x <= tg.t + 5)).length;
+    if (!teacher){ store.set("tapBest", Math.max(hit, store.get("tapBest", 0))); if (hit >= 3) markDone("form"); }
+    res.innerHTML = `<div class="answer"><div class="big">${targets.length}回のうち <b>${hit}回</b> 見つけた！${miss ? `（はずれ ${miss}回）` : ""}</div>
+      <p style="margin:.4em 0 0">春の主題は、はじめをふくめて<b>全部で${targets.length + 1}回</b>出てきます。間にはさまる場面（小鳥・泉・雷…）を<b>エピソード</b>といいます。</p>
+      <div class="formfig" style="margin-top:8px">${targets.map((tg,k) => `<div style="background:${found[k] ? "#9bd49b" : "#e6b0b0"}">${fmt(tg.t)}<br>${found[k] ? "⭕ " + (found[k] - tg.t >= 0 ? "+" : "") + (found[k] - tg.t).toFixed(1) + "秒" : "❌ 見のがし"}</div>`).join("")}</div>
+      <p class="tip">⭕ の数字は、主題が始まってから何秒で気づけたか。下のプレーヤーで ${KIND.theme.emoji} の場面を聴き直してみよう。</p></div>`;
+    setStuHide(false); if (teacher) { tHide = false; applyTHide(); }
+    box.querySelector("#tapStart").textContent = "▶ もう一度";
+  };
+  box.querySelector("#tapStart").onclick = () => {
+    if (!teacher) setStuHide(true);
+    tapState = {taps:[], finish}; res.innerHTML = ""; fb.textContent = "よく聴いて…";
+    loopSec = -1; stopAt = null; seek(0); play(); btn.disabled = false;
+    box.querySelector("#tapStop").classList.remove("hidden");
+  };
+  box.querySelector("#tapStop").onclick = finish;
+  btn.onclick = () => {
+    if (!tapState) return;
+    const t = au.currentTime; tapState.taps.push(t);
+    const ok = targets.some(tg => t >= tg.t - 1.5 && t <= tg.t + 5);
+    fb.textContent = teacher ? `記録しました（${fmt(t)}）` : (ok ? "⭕ 見つけた！" : "🤔 まだ主題じゃないかも…");
+    btn.style.background = ok || teacher ? "#9bd49b" : "#e6b0b0"; setTimeout(() => btn.style.background = "", 400);
+  };
+}
+au.addEventListener("ended", () => { if (tapState) tapState.finish(); });
+
+/* ---------- 音楽のしくみ ---------- */
+function renderElements(box){
+  const saved = store.get("elem", {});
+  const kinds = ["theme","birds","stream","storm"];
+  box.innerHTML = kinds.map(k => {
+    const E = ELEMENTS[k]; const firstIdx = SECTIONS.findIndex(s => s.kind === k);
+    return `<div class="card" style="margin-top:12px;border-left:8px solid ${KIND[k].hex}" data-k="${k}">
+      <h3>${KIND[k].emoji} ${KIND[k].label}</h3>
+      <div class="btnrow" style="margin-top:0"><button class="smallbtn" data-play="${firstIdx}">▶ この場面を聴く</button></div>
+      <p style="margin:.6em 0 0">${E.q}</p>
+      <div class="elgrid">${E.opts.map((o,j) => `<button class="elopt" data-j="${j}">${o[0]}</button>`).join("")}</div>
+      <div class="btnrow"><button class="btn green" data-check>答え合わせ</button></div>
+      <div class="exp"></div></div>`;
+  }).join("");
+  box.querySelectorAll("[data-play]").forEach(b => b.onclick = () => { const i = +b.dataset.play; loopSec = -1; playClip(SECTIONS[i].t, secEnd(i) - SECTIONS[i].t); });
+  box.querySelectorAll(".card[data-k]").forEach(card => {
+    const k = card.dataset.k, E = ELEMENTS[k];
+    const sel = new Set((saved[k] && saved[k].sel) || []);
+    const opts = card.querySelectorAll(".elopt");
+    const paint = () => opts.forEach(o => o.classList.toggle("on", sel.has(+o.dataset.j)));
+    paint();
+    opts.forEach(o => o.onclick = () => { const j = +o.dataset.j; sel.has(j) ? sel.delete(j) : sel.add(j); opts.forEach(x => x.classList.remove("right","wrong","miss")); card.querySelector(".exp").innerHTML = ""; paint(); });
+    const check = () => {
+      let good = 0;
+      opts.forEach(o => { const j = +o.dataset.j, ans = E.opts[j][1]; o.classList.remove("on");
+        if (sel.has(j) && ans){ o.classList.add("right"); good++; } else if (sel.has(j)) o.classList.add("wrong"); else if (ans) o.classList.add("miss"); });
+      const total = E.opts.filter(o => o[1]).length, wrong = [...sel].filter(j => !E.opts[j][1]).length;
+      card.querySelector(".exp").innerHTML = `<div class="answer"><b>${good === total && !wrong ? "⭕ パーフェクト！" : `${total}個中 ${good}個正解${wrong ? `、ちがうもの ${wrong}個` : ""}`}</b>（点線＝見のがし）<br>${E.exp}</div>`;
+      saved[k] = {sel:[...sel], checked:true}; store.set("elem", saved);
+      if (kinds.every(x => saved[x] && saved[x].checked)) markDone("elem");
+    };
+    card.querySelector("[data-check]").onclick = check;
+    if (saved[k] && saved[k].checked) check();
+  });
+}
+
+/* ---------- ワークシート印刷 ---------- */
+function esc(s){ return String(s || "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function printSheet(filled){
+  const N = filled ? notes : {feel1:[], feel1txt:"", feel2:[], fav:"", why:"", intro:""};
+  document.getElementById("printsheet").innerHTML = `
+    <h1>ヴィヴァルディ「春」第1楽章 鑑賞ワークシート</h1>
+    <p>　年　　組　　番　名前（　　　　　　　　　　　　）</p>
+    <h3>1. はじめに聴いて感じたこと</h3>
+    <div class="box">${esc(N.feel1.join("・"))}${N.feel1.length ? "\n" : ""}${esc(N.feel1txt)}</div>
+    <h3>2. 場面と音楽の工夫</h3>
+    <table><tr><th style="width:22%">場面</th><th style="width:38%">詩（ソネット）</th><th>気づいた音楽の工夫</th></tr>
+    ${["theme","birds","stream","storm"].map(k => { const s = SECTIONS.find(x => x.kind === k); return `<tr><td>${KIND[k].emoji} ${KIND[k].label}</td><td>${esc(k === "theme" ? "春がやってきた" : s.poem)}</td><td style="height:18mm"></td></tr>`; }).join("")}
+    </table>
+    <h3>3. 曲のしくみ（リトルネロ形式）</h3>
+    <p>春の主題は全部で（　　）回出てくる。主題の間にはさまる部分を（　　　　　　）という。</p>
+    <h3>4. いちばん好きな場面とその理由</h3>
+    <div class="box">${N.fav ? "好きな場面：" + esc(N.fav) + "\n" : ""}${esc(N.why)}</div>
+    <h3>5. 「春」の紹介文</h3>
+    <div class="box tall">${esc(N.intro)}</div>`;
+  setTimeout(() => window.print(), 50);
+}
+
+/* ================= 先生モード ================= */
+let curTab = "show", tHide = false, tPoem = true;
+const tScene = makeScene(document.getElementById("tStage"), {hideNames:() => tHide, showPoem:() => tPoem, onSection: si => {
+  const s = SECTIONS[si];
+  document.getElementById("tPoint").innerHTML = tHide ? `<span class="tip">（場面名をかくしています）</span><br>発問例：「いまの音楽は、どんな場面を表していると思う？ 音のどんなところからそう思った？」` : `<b>${KIND[s.kind].emoji} ${s.name}</b><br>${s.point}`;
+}});
+const tPlayer = makePlayer(document.getElementById("tPlayer"), {secButtons:true, legend:true, hideNames:() => tHide});
+function applyTHide(){
+  document.getElementById("tHide").classList.toggle("on", tHide);
+  document.getElementById("tHide").textContent = tHide ? "🙉 場面名を表示する" : "🙈 場面名をかくす";
+  buildSecButtons(tPlayer); drawTimeline(tPlayer); tScene.dirty = true;
+}
+document.getElementById("tHide").onclick = () => { tHide = !tHide; applyTHide(); };
+document.getElementById("tPoem").onclick = e => { tPoem = !tPoem; e.target.classList.toggle("on", tPoem); tScene.dirty = true; };
+document.getElementById("tPoem").classList.add("on");
+document.getElementById("tFull").onclick = () => togglePresent();
+function togglePresent(force){
+  const on = force != null ? force : !document.body.classList.contains("present");
+  document.body.classList.toggle("present", on);
+  try{ if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{}); else if (!on && document.fullscreenElement) document.exitFullscreen(); }catch(e){}
+  requestAnimationFrame(() => { tScene.resize(); drawTimeline(tPlayer); });
+}
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) { document.body.classList.remove("present"); requestAnimationFrame(() => { tScene.resize(); drawTimeline(tPlayer); }); } });
+
+function showTab(t){
+  curTab = t; pause(); stopAt = null; tapState = null;
+  document.querySelectorAll("#ttabs .tab").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  ["show","quiz","tap","guide","settings"].forEach(k => document.getElementById("t-" + k).classList.toggle("hidden", k !== t));
+  if (t === "quiz") startQuiz(document.getElementById("tQuiz"), true);
+  if (t === "tap") startTap(document.getElementById("tTap"), true);
+  if (t === "guide") renderGuide();
+  if (t === "settings") renderSettings();
+  if (t === "show") requestAnimationFrame(() => { tScene.resize(); drawTimeline(tPlayer); tScene.dirty = true; });
+}
+document.querySelectorAll("#ttabs .tab").forEach(b => b.onclick = () => showTab(b.dataset.t));
+
+function renderGuide(){
+  document.getElementById("tGuide").innerHTML = `
+  <h2>📋 指導の流れ（例：2時間扱い）</h2>
+  <p class="lead">中学校第1学年「鑑賞」を想定した例です。学級の実態に合わせて自由に組みかえてください。</p>
+  <div class="note"><b>ねらい</b>：曲想と音楽の構造（リトルネロ形式、独奏と合奏、音色・強弱・旋律などの工夫）との関わりを理解し、ソネットの情景と結びつけながら、よさや美しさを味わって聴く。</div>
+  <h3>第1時　詩の情景と音楽をむすびつける</h3>
+  <table>
+    <tr><th style="width:24%">学習活動</th><th>主な発問・指示</th><th style="width:28%">このアプリで</th></tr>
+    <tr><td>① 通して聴く</td><td>「どんな景色が見えますか？ 気分はどう変わりましたか？」<br>→ 感じたことをワークシート1に書く</td><td>提示画面で <b>🙈場面名をかくす</b> にして通して再生</td></tr>
+    <tr><td>② 作品を知る</td><td>作曲者・《四季》・ソネットについて紹介する</td><td>トップ画面「この曲について」</td></tr>
+    <tr><td>③ 詩と場面をむすぶ</td><td>「この部分は、詩のどの行に合いそう？」「音のどんなところからそう思った？」</td><td>場面名をかくしたまま場面ボタンで再生 → 意見が出たら表示</td></tr>
+    <tr><td>④ 確かめる</td><td>どの場面かクイズで確認する</td><td>❓みんなでクイズ（答えはボタンで表示）</td></tr>
+  </table>
+  <h3>第2時　音楽の構造に気づき、紹介文を書く</h3>
+  <table>
+    <tr><th style="width:24%">学習活動</th><th>主な発問・指示</th><th style="width:28%">このアプリで</th></tr>
+    <tr><td>① 主題さがし</td><td>「最初のメロディーがもどってきたら手を挙げよう」</td><td>🌸主題さがしゲーム（先生が記録）</td></tr>
+    <tr><td>② 形式を知る</td><td>リトルネロ形式・エピソード・独奏と合奏（協奏曲）について確認</td><td>提示画面のタイムライン（色の並び）</td></tr>
+    <tr><td>③ 工夫を見つける</td><td>「小鳥・泉・雷は、どんな音の工夫で表されている？」（音色・音の高さ・強弱・リズム・トリル・トレモロ・音階）</td><td>🔁 場面をくり返す ＋「聴きどころ」</td></tr>
+    <tr><td>④ 紹介文</td><td>「この曲を知らない人に、よさを伝える紹介文を書こう」<br>根拠となる音楽の工夫を入れて書く</td><td>ワークシート（設定タブで印刷）／生徒用モード⑥</td></tr>
+  </table>
+  <h3>場面ごとの聴きどころ</h3>
+  <table><tr><th style="width:24%">場面（開始）</th><th>聴きどころ</th></tr>
+  ${SECTIONS.map(s => `<tr><td>${KIND[s.kind].emoji} ${s.name}<br><span class="tip">${fmt(s.t)}〜</span></td><td>${s.point}</td></tr>`).join("")}
+  </table>
+  <h3>生徒がひとりで取り組む場合</h3>
+  <p>画面右上の <b>🧑‍🎓 ひとりで学ぶ</b> を選ぶと、①〜⑥のステップで同じ内容を自分のペースで進められます（家庭学習・タブレット学習・欠席者の補充などに）。書いた内容は端末に保存され、最後に印刷やPDF保存ができます。</p>
+  <h3>評価の視点（例）</h3>
+  <ul>
+    <li>【知識】曲想と、リトルネロ形式・独奏と合奏・各場面の音楽の工夫との関わりを理解している。</li>
+    <li>【思考・判断・表現】音楽の工夫を根拠にして、曲のよさや美しさを紹介文に書いている。</li>
+    <li>【主体的に学習に取り組む態度】情景と音楽の関わりに関心をもち、聴き深めようとしている。</li>
+  </ul>`;
+}
+
+function renderSettings(){
+  const tb = document.getElementById("setTbl");
+  tb.innerHTML = SECTIONS.map((s,i) => `<tr><td style="width:40px"><b>${i+1}</b></td><td>${KIND[s.kind].emoji} ${s.name}</td>
+    <td><input type="number" step="0.1" min="0" value="${s.t}" data-i="${i}" ${i===0?"disabled":""}> 秒</td>
+    <td><button class="smallbtn" data-now="${i}" ${i===0?"disabled":""}>いまの位置</button> <button class="smallbtn" data-hear="${i}">▶</button></td></tr>`).join("");
+  tb.querySelectorAll("input").forEach(inp => inp.onchange = () => setTime(+inp.dataset.i, parseFloat(inp.value)));
+  tb.querySelectorAll("[data-now]").forEach(b => b.onclick = () => setTime(+b.dataset.now, Math.round(au.currentTime*10)/10));
+  tb.querySelectorAll("[data-hear]").forEach(b => b.onclick = () => { if (!au.paused && secAt(au.currentTime) === +b.dataset.hear) pause(); else jump(+b.dataset.hear); });
+  document.querySelectorAll("[data-themeset]").forEach(b => b.classList.toggle("on", (store.get("theme","") || "") === b.dataset.themeset));
+}
+function setTime(i, v){
+  if (!isFinite(v)) return renderSettings();
+  const lo = i > 0 ? SECTIONS[i-1].t + .5 : 0, hi = i + 1 < SECTIONS.length ? SECTIONS[i+1].t - .5 : dur() - .5;
+  SECTIONS[i].t = Math.max(lo, Math.min(hi, v));
+  store.set("times", SECTIONS.map(s => s.t));
+  players.forEach(P => { buildSecButtons(P); drawTimeline(P); });
+  renderSettings();
+}
+document.getElementById("setReset").onclick = () => { SECTIONS.forEach((s,i) => s.t = DEFAULT_SECTIONS[i].t); store.del("times"); players.forEach(P => { buildSecButtons(P); drawTimeline(P); }); renderSettings(); };
+document.getElementById("printBlank").onclick = () => printSheet(false);
+document.getElementById("fileIn").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  pause(); au.src = URL.createObjectURL(f);
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = await ctx.decodeAudioData(await f.arrayBuffer());
+    const d = buf.getChannelData(0), hop = Math.floor(buf.sampleRate / ENV_RATE), out = [];
+    let mx = 0; for (let i = 0; i + hop <= d.length; i += hop){ let s = 0; for (let j = 0; j < hop; j++) s += d[i+j]*d[i+j]; const r = Math.sqrt(s/hop); out.push(r); mx = Math.max(mx, r); }
+    env = out.map(v => Math.round(v / (mx || 1) * 99)); ctx.close && ctx.close();
+  }catch(err){ env = []; }
+  au.addEventListener("loadedmetadata", () => players.forEach(drawTimeline), {once:true});
+  players.forEach(drawTimeline);
+  alert("音声を読み込みました。曲を再生しながら、場面の開始時間を合わせてください。");
+};
+document.querySelectorAll("[data-themeset]").forEach(b => b.onclick = () => { store.set("theme", b.dataset.themeset); applyTheme(); renderSettings(); });
+function applyTheme(){ const t = store.get("theme",""); if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; players.forEach(drawTimeline); }
+
+/* ================= キーボード ================= */
+document.addEventListener("keydown", e => {
+  if (/INPUT|TEXTAREA/.test(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (mode === "home") return;
+  if (e.key === " "){ e.preventDefault(); if (tapState){ const b = document.getElementById("tapBtn"); if (b) b.click(); } else { stopAt = null; toggle(); } return; }
+  if (tapState) return;
+  if (e.key === "ArrowRight"){ e.preventDefault(); jump(secAt(au.currentTime) + 1); }
+  else if (e.key === "ArrowLeft"){ e.preventDefault(); const i = secAt(au.currentTime); jump(au.currentTime - SECTIONS[i].t > 2 ? i : i - 1); }
+  else if (/^[0-9]$/.test(e.key) && mode === "teacher" && curTab === "show"){ const n = e.key === "0" ? 9 : +e.key - 1; jump(n); }
+  else if (e.key === "l" || e.key === "L"){ loopSec = loopSec >= 0 ? -1 : secAt(au.currentTime); }
+  else if ((e.key === "h" || e.key === "H") && mode === "teacher"){ tHide = !tHide; applyTHide(); }
+  else if ((e.key === "f" || e.key === "F") && mode === "teacher" && curTab === "show"){ togglePresent(); }
+  else if (e.key === "Escape" && document.body.classList.contains("present")){ togglePresent(false); }
+});
+
+au.addEventListener("loadedmetadata", () => players.forEach(drawTimeline));
+au.addEventListener("error", () => {
+  if (au.src.startsWith("blob:")) return;
+  const msg = document.createElement("div");
+  msg.className = "note"; msg.style.cssText = "position:fixed;top:64px;left:16px;right:16px;z-index:50;max-width:720px;margin:0 auto";
+  msg.innerHTML = "⚠️ 音源（spring.mp3）を読み込めませんでした。index.html と同じフォルダに spring.mp3 があるか確認してください。先生用の「設定」から手元の音声ファイルを読み込むこともできます。";
+  document.body.appendChild(msg); setTimeout(() => msg.remove(), 9000);
+});
+
+// 音源をまるごと読み込んでおく（サーバーによっては途中から再生できないため）
+if (location.protocol.startsWith("http")){
+  fetch("spring.mp3").then(r => r.ok ? r.blob() : Promise.reject()).then(bl => {
+    if (au.src.startsWith("blob:")) return; // すでに別の録音が読み込まれている
+    const t = au.currentTime, wasPlaying = !au.paused;
+    au.src = URL.createObjectURL(bl);
+    au.addEventListener("loadedmetadata", () => { if (t) au.currentTime = t; if (wasPlaying) play(); }, {once:true});
+  }).catch(() => {});
+}
+applyTheme();
+requestAnimationFrame(loop);
+const initMode = new URLSearchParams(location.search).get("mode") || store.get("mode", "home");
+setMode(["student","teacher","home"].includes(initMode) ? initMode : "home");
+</script>
+</body>
+</html>
