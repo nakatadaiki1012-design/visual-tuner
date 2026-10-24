@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>数学Bラボ</title>
+<meta name="description" content="数学Bの数列・統計的な推測を、図を動かして見てわかるアプリ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* 見た目：数学Aラボとそろえた方眼ノート（紙・墨・緑青・朱） */
+:root {
+  --bg: #f1ede4; --panel: #fbf9f4; --ink: #24282b; --muted: #6d6b63; --line: #d6d0c2; --chip: #ebe6da;
+  --accent: #2c6352; --accent-ink: #fbf9f4; --accent-soft: rgba(44, 99, 82, .16);
+  --warm: #b8502c; --warm-soft: rgba(184, 80, 44, .16);
+  --blue: #2f5f9e; --blue-soft: rgba(47, 95, 158, .16);
+  --gold: #b88a12; --gold-soft: rgba(184, 138, 18, .18); --violet: #7a4fa3;
+  --stage-1: #fdfcf8; --stage-2: #ece7dc; --grid: rgba(36, 40, 43, .06);
+  --ok: #2c7a4f; --ng: #b8402c;
+  --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-data: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --r: 6px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #18201c; --panel: #1f2924; --ink: #ebe8dd; --muted: #a3a89b; --line: #36443c; --chip: #28342e;
+    --accent: #8cc5a6; --accent-ink: #18201c; --accent-soft: rgba(140, 197, 166, .2);
+    --warm: #eda26b; --warm-soft: rgba(237, 162, 107, .2);
+    --blue: #8fb5e8; --blue-soft: rgba(143, 181, 232, .2);
+    --gold: #e3c15a; --gold-soft: rgba(227, 193, 90, .2); --violet: #c3a3e6;
+    --stage-1: #26332d; --stage-2: #141b17; --grid: rgba(235, 232, 221, .06);
+    --ok: #8cd4a6; --ng: #f09a7a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #18201c; --panel: #1f2924; --ink: #ebe8dd; --muted: #a3a89b; --line: #36443c; --chip: #28342e;
+  --accent: #8cc5a6; --accent-ink: #18201c; --accent-soft: rgba(140, 197, 166, .2);
+  --warm: #eda26b; --warm-soft: rgba(237, 162, 107, .2);
+  --blue: #8fb5e8; --blue-soft: rgba(143, 181, 232, .2);
+  --gold: #e3c15a; --gold-soft: rgba(227, 193, 90, .2); --violet: #c3a3e6;
+  --stage-1: #26332d; --stage-2: #141b17; --grid: rgba(235, 232, 221, .06);
+  --ok: #8cd4a6; --ng: #f09a7a;
+  color-scheme: dark;
+}
+html.fz1 { font-size: 17px; } html.fz2 { font-size: 19px; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  background-color: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 1rem; line-height: 1.6;
+  height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .45; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+sub, sup { font-size: .68em; line-height: 0; }
+
+/* 上のバー：分野 */
+.top {
+  flex: none; display: flex; align-items: center; gap: 14px;
+  padding: 7px max(14px, env(safe-area-inset-right, 0px)) 7px max(14px, env(safe-area-inset-left, 0px));
+  border-bottom: 1.5px solid var(--ink); background: var(--panel);
+}
+.brand { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; letter-spacing: .04em; margin: 0; white-space: nowrap; }
+.brand b { color: var(--warm); }
+.secnav { display: flex; gap: 2px; min-width: 0; flex: 1; }
+.secnav button { border: 0; background: transparent; padding: 5px 12px; font-size: .95rem; color: var(--muted); white-space: nowrap; font-weight: 700; }
+.secnav button:hover { color: var(--ink); }
+.secnav .short { display: none; }
+.secnav button[aria-current="true"] { color: var(--ink); box-shadow: inset 0 -2.5px 0 var(--warm); }
+.tools { display: flex; gap: 4px; }
+.tbtn { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 3px 9px; font-size: .85rem; font-weight: 700; }
+.tbtn:hover { border-color: var(--ink); }
+
+/* 単元の列（横にならぶ） */
+.units {
+  flex: none; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  padding: 8px max(14px, env(safe-area-inset-right, 0px)) 0 max(14px, env(safe-area-inset-left, 0px));
+}
+.units::-webkit-scrollbar { display: none; }
+.uchip { flex: none; border: 1px solid var(--line); background: var(--panel); border-radius: 5px; padding: 4px 11px 5px; text-align: left; line-height: 1.25; }
+.uchip:hover { border-color: var(--ink); }
+.uchip b { display: block; font-size: .9rem; }
+.uchip .num { font-family: var(--font-data); color: var(--warm); font-size: .75rem; margin-right: 5px; }
+.uchip .pips { display: flex; gap: 3px; margin-top: 3px; }
+.uchip .pips i { width: 14px; height: 4px; border-radius: 2px; background: var(--line); }
+.uchip .pips i.on { background: var(--accent); }
+.uchip[aria-current="true"] { border-color: var(--ink); box-shadow: 2px 2px 0 var(--ink); }
+.uchip.clear b::after { content: " ✓"; color: var(--accent); }
+
+/* 全体の配置：左にステージ（図）、右に説明 */
+.app {
+  flex: 1; min-height: 0; display: grid; gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 370px;
+  padding: 8px max(14px, env(safe-area-inset-right, 0px)) max(10px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+}
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+
+/* ステージ */
+.stage-wrap {
+  position: relative; border-radius: var(--r); overflow: hidden; min-height: 0; border: 1px solid var(--line);
+  background: radial-gradient(120% 90% at 40% 35%, var(--stage-1), var(--stage-2));
+  display: flex; flex-direction: column;
+}
+.fband { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--panel); border-bottom: 1.5px solid var(--ink); min-height: 50px; }
+.fbody { flex: 1; min-width: 0; }
+.fgen { font-size: 1.25rem; line-height: 1.45; font-weight: 600; font-family: var(--font-data); }
+.fgen .k { font-family: var(--font-body); font-size: .72rem; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; margin-right: 10px; vertical-align: 3px; font-weight: 500; }
+.fnow { font-family: var(--font-data); font-size: 1.05rem; line-height: 1.5; margin-top: 2px; }
+.fnow:empty { display: none; }
+.stage-area { position: relative; flex: 1; min-height: 0; }
+.stage { position: absolute; inset: 0; }
+.stage-hint {
+  position: absolute; left: 10px; top: 8px; font-size: .8rem; color: var(--ink); background: var(--panel);
+  border: 1px solid var(--warm); border-radius: 3px; padding: 2px 8px; pointer-events: none; z-index: 2; max-width: calc(100% - 20px); font-weight: 700;
+}
+.stage-hint:empty { display: none; }
+.stage-hint::before { content: "👆 "; }
+
+/* 説明パネル */
+.card { display: flex; flex-direction: column; overflow: hidden; }
+.stepper { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+.stepper button { border: 0; background: transparent; padding: 8px 2px 7px; font-weight: 700; font-size: .9rem; color: var(--muted); position: relative; }
+.stepper button + button::before { content: ""; position: absolute; left: 0; top: 30%; height: 40%; border-left: 1px solid var(--line); }
+.stepper button[aria-current="true"] { color: var(--ink); box-shadow: inset 0 -3px 0 var(--warm); }
+.stepper button.done::after { content: "✓"; color: var(--accent); margin-left: 3px; }
+.card-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 16px 10px; display: flex; flex-direction: column; gap: 10px; }
+.ptitle { display: flex; align-items: baseline; gap: 8px; }
+.ptitle .tag { font-size: .72rem; border: 1px solid var(--ink); border-radius: 3px; padding: 0 6px; font-weight: 700; white-space: nowrap; }
+.ptitle h2 { font-family: var(--font-display); font-size: 1.25rem; margin: 0; line-height: 1.3; }
+.prob { border: 1.5px solid var(--ink); border-radius: 3px; padding: 8px 11px; background: var(--bg); font-size: .95rem; line-height: 1.65; }
+.prob b { color: var(--warm); }
+.say { font-size: 1.02rem; line-height: 1.7; }
+.say b { color: var(--warm); }
+.say .eq, .eq { font-family: var(--font-data); }
+.lead { font-size: .95rem; line-height: 1.65; margin: 0; }
+.lead b { color: var(--warm); }
+.dots { display: flex; gap: 5px; align-items: center; font-size: .75rem; color: var(--muted); }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.dots i.on { background: var(--warm); }
+.dots i.done { background: var(--accent); }
+.ctrl { display: flex; flex-direction: column; gap: 6px; }
+.ctrl label.sl { display: grid; grid-template-columns: 5.5em 1fr 3.4em; gap: 8px; align-items: center; font-size: .9rem; }
+.ctrl label.sl output { font-family: var(--font-data); font-weight: 600; text-align: right; }
+.ctrl input[type="range"] { width: 100%; accent-color: var(--warm); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 4px 10px; font-size: .85rem; font-weight: 500; }
+.seg button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--panel); font-weight: 700; }
+.readout { border: 1px dashed var(--line); border-radius: 4px; padding: 6px 10px; font-size: .92rem; line-height: 1.6; background: var(--bg); }
+.readout b { color: var(--warm); }
+.pts { margin: 0; padding-left: 1.1em; font-size: .9rem; line-height: 1.55; color: var(--ink); }
+.pts li { margin-bottom: 2px; }
+.pts b { color: var(--warm); }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.choice { border: 1.5px solid var(--ink); background: var(--panel); border-radius: 5px; padding: 9px 8px; font-family: var(--font-data); font-weight: 600; font-size: .98rem; box-shadow: 2px 2px 0 var(--ink); line-height: 1.35; }
+.choice:hover:not(:disabled) { background: var(--chip); }
+.choice:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+.choice.ok { background: var(--accent); color: var(--accent-ink); }
+.choice.ng { background: var(--warm-soft); text-decoration: line-through; opacity: .7; }
+.choice:disabled { opacity: 1; cursor: default; }
+.choices.txt .choice { font-family: var(--font-body); font-size: .9rem; text-align: left; }
+.choices.one { grid-template-columns: 1fr; }
+.choice.ans { display: inline-block; padding: 2px 10px; box-shadow: none; font-size: .92rem; }
+.minirow { display: flex; gap: 6px; flex-wrap: wrap; }
+.mini { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 3px 10px; font-size: .85rem; font-weight: 700; }
+.mini:hover { border-color: var(--ink); }
+.hintbox { border-left: 3px solid var(--gold); background: var(--gold-soft); padding: 6px 10px; font-size: .9rem; border-radius: 0 4px 4px 0; }
+.result { font-weight: 700; font-size: 1rem; }
+.result.ok { color: var(--ok); } .result.ng { color: var(--ng); }
+.summary { border: 1.5px solid var(--accent); border-radius: 5px; padding: 8px 12px; background: var(--accent-soft); }
+.summary h3 { margin: 0 0 4px; font-family: var(--font-display); font-size: 1.05rem; }
+.stamp { display: inline-block; font-family: var(--font-display); font-weight: 800; color: var(--warm); border: 2.5px solid var(--warm); border-radius: 50%; padding: 6px 10px; transform: rotate(-12deg); font-size: 1rem; }
+.card-foot { flex: none; display: flex; gap: 8px; padding: 9px 12px; border-top: 1px solid var(--line); }
+.btn { border: 1px solid var(--ink); background: var(--panel); border-radius: 5px; padding: 8px 14px; font-size: .95rem; font-weight: 700; }
+.btn:hover:not(:disabled) { background: var(--chip); }
+.btn.main { flex: 1; background: var(--accent); color: var(--accent-ink); box-shadow: 2px 2px 0 var(--ink); }
+.btn.main:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+.btn.main.pulse { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 2px 2px 0 var(--ink), 0 0 0 5px var(--accent-soft); } }
+.fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.1; font-family: var(--font-data); margin: 0 2px; font-size: .92em; }
+.fr > i { font-style: normal; padding: 0 3px; }
+.fr > i:first-child { border-bottom: 1.5px solid currentColor; }
+.cw { color: var(--warm); } .ca { color: var(--accent); } .cb { color: var(--blue); } .cv { color: var(--violet); } .cg { color: var(--gold); }
+.sg { font-size: 1.25em; vertical-align: -2px; }
+
+/* ステージの SVG */
+.sv { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+.sv text { font-family: var(--font-body); fill: var(--ink); font-size: 15px; }
+.sv .mono { font-family: var(--font-data); }
+.sv .disp { font-family: var(--font-display); font-weight: 800; }
+.sv .mut { fill: var(--muted); }
+.sv .tw { fill: var(--warm); } .sv .ta { fill: var(--accent); } .sv .tb { fill: var(--blue); } .sv .tg { fill: var(--gold); } .sv .tv { fill: var(--violet); } .sv .tp { fill: var(--panel); }
+.sv .b { font-weight: 700; }
+.ink { stroke: var(--ink); fill: none; stroke-width: 2; }
+.thin { stroke: var(--muted); fill: none; stroke-width: 1.2; }
+.dash { stroke-dasharray: 6 5; }
+.s-ac { stroke: var(--accent); } .s-wm { stroke: var(--warm); } .s-bl { stroke: var(--blue); } .s-gd { stroke: var(--gold); } .s-vi { stroke: var(--violet); } .s-ink { stroke: var(--ink); } .s-mut { stroke: var(--muted); } .s-ln { stroke: var(--line); } .s-pn { stroke: var(--panel); }
+.f-ac { fill: var(--accent); } .f-wm { fill: var(--warm); } .f-bl { fill: var(--blue); } .f-gd { fill: var(--gold); } .f-vi { fill: var(--violet); }
+.f-acs { fill: var(--accent-soft); } .f-wms { fill: var(--warm-soft); } .f-bls { fill: var(--blue-soft); } .f-gds { fill: var(--gold-soft); }
+.f-pn { fill: var(--panel); } .f-ink { fill: var(--ink); } .f-chip { fill: var(--chip); } .f-none { fill: none; } .f-bg { fill: var(--bg); } .f-ln { fill: var(--line); }
+.ghost { opacity: .35; }
+.pop { animation: pop .45s cubic-bezier(.3, 1.4, .5, 1) both; transform-box: fill-box; transform-origin: center bottom; }
+@keyframes pop { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
+.fadein { animation: fadein .5s ease-out both; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+.grow { animation: grow .6s ease-out both; transform-box: fill-box; transform-origin: center bottom; }
+@keyframes grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.draw { stroke-dasharray: 2000; animation: draw 1.1s ease-out both; }
+@keyframes draw { from { stroke-dashoffset: 2000; } to { stroke-dashoffset: 0; } }
+.drag { cursor: ns-resize; }
+.domino { transition: transform .35s cubic-bezier(.5, 0, .9, .5); transform-box: fill-box; transform-origin: right bottom; }
+.domino.fall { transform: rotate(68deg); }
+.domino.stop { transform: rotate(0deg); }
+.halo { animation: halo 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes halo { from { opacity: .8; transform: scale(1); } to { opacity: 0; transform: scale(1.8); } }
+
+/* スマホ・たて長：上に図、下に説明 */
+@media (max-width: 860px) {
+  .top { gap: 8px; }
+  .brand { font-size: 1.05rem; }
+  .secnav button { padding: 5px 7px; font-size: .85rem; }
+  .secnav .long { display: none; } .secnav .short { display: inline; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 8px; }
+  .card { max-height: 58dvh; }
+  .ipts { display: none; }
+  .choices.txt .choice { padding: 6px 8px; font-size: .85rem; }
+  .prob { padding: 6px 9px; font-size: .88rem; line-height: 1.55; }
+  .fband { min-height: 0; padding: 6px 10px; }
+  .fgen { font-size: 1rem; }
+  .fnow { font-size: .9rem; }
+  .card-body { padding: 9px 12px 8px; gap: 8px; }
+  .say { font-size: .95rem; }
+  .ptitle h2 { font-size: 1.05rem; }
+  .choice { padding: 7px 6px; font-size: .9rem; }
+}
+@media (max-width: 860px) and (max-height: 700px) {
+  .lead, .pts { font-size: .85rem; }
+}
+/* 等差数列の和・等比数列の和：上から落ちてくる */
+.drop { animation: drop .6s cubic-bezier(.3, 1.3, .5, 1) both; }
+@keyframes drop { from { opacity: 0; transform: translateY(-60px); } to { opacity: 1; transform: none; } }
+/* ドミノがたおれる */
+@keyframes fallA { from { transform: rotate(0deg); } to { transform: rotate(var(--ang)); } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 class="brand">数学B<b>ラボ</b></h1>
+  <nav class="secnav" id="secnav" aria-label="分野"></nav>
+  <div class="tools">
+    <button type="button" class="tbtn" id="fzBtn" title="文字の大きさ">あA</button>
+    <button type="button" class="tbtn" id="themeBtn" title="明るい／暗い画面">🌗</button>
+    <button type="button" class="tbtn" id="maxBtn" title="全画面（プロジェクター用）">⛶</button>
+  </div>
+</header>
+<nav class="units" id="units" aria-label="単元"></nav>
+<main class="app">
+  <section class="stage-wrap" aria-label="図">
+    <div class="fband"><div class="fbody"><div class="fgen" id="fgen"></div><div class="fnow" id="fnow" aria-live="polite"></div></div></div>
+    <div class="stage-area"><div class="stage" id="stage"></div><div class="stage-hint" id="hint"></div></div>
+  </section>
+  <aside class="panel card" aria-label="説明">
+    <div class="stepper" id="stepper"></div>
+    <div class="card-body" id="body"></div>
+    <div class="card-foot"><button type="button" class="btn" id="prevBtn">◀</button><button type="button" class="btn main" id="nextBtn">次へ ▶</button></div>
+  </aside>
+</main>
+<script>
+"use strict";
+/* ===== 共通の部品 ===== */
+const $ = (sel, root = document) => root.querySelector(sel);
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "html") el.innerHTML = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return el;
+}
+const NS = "http://www.w3.org/2000/svg";
+function s(tag, attrs, parent) {
+  const el = document.createElementNS(NS, tag);
+  for (const k in attrs || {}) {
+    if (k === "text") el.textContent = attrs[k];
+    else if (attrs[k] != null && attrs[k] !== false) el.setAttribute(k, attrs[k]);
+  }
+  if (parent) parent.appendChild(el);
+  return el;
+}
+/* SVG の文字：T(親, x, y, 文字, class, 文字の大きさ, anchor) */
+function T(g, x, y, str, cls, fs, anchor = "middle") {
+  return s("text", { x, y, text: str, class: cls, "text-anchor": anchor, style: fs ? `font-size:${fs}px` : null }, g);
+}
+function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+function svgPt(svg, e) {
+  const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+  const q = p.matrixTransform(svg.getScreenCTM().inverse());
+  return { x: q.x, y: q.y };
+}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+const sum = a => a.reduce((x, y) => x + y, 0);
+/* 小数を見やすく（うしろの 0 をとる） */
+const fmt = (v, d = 2) => { let t = (Math.round(v * 10 ** d) / 10 ** d).toFixed(d); if (t.includes(".")) t = t.replace(/0+$/, "").replace(/\.$/, ""); return t === "-0" ? "0" : t; };
+const sgn = v => (v < 0 ? "− " + Math.abs(v) : "+ " + v);
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; }
+function nCr(n, r) { if (r < 0 || r > n) return 0; r = Math.min(r, n - r); let v = 1; for (let i = 1; i <= r; i++) v = v * (n - r + i) / i; return Math.round(v); }
+function lnC(n, r) { let v = 0; for (let i = 1; i <= r; i++) v += Math.log(n - r + i) - Math.log(i); return v; }
+function binomP(n, p, k) { if (k < 0 || k > n) return 0; if (p <= 0) return k === 0 ? 1 : 0; if (p >= 1) return k === n ? 1 : 0; return Math.exp(lnC(n, Math.min(k, n - k)) + k * Math.log(p) + (n - k) * Math.log(1 - p)); }
+function erf(x) { const t = 1 / (1 + .3275911 * Math.abs(x)); const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; }
+const Phi = z => .5 * (1 + erf(z / Math.SQRT2));
+/* 正規分布表 p(z) = P(0 ≦ Z ≦ z) */
+const pz = z => Phi(z) - .5;
+const SUBD = "₀₁₂₃₄₅₆₇₈₉", SUPD = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const subd = n => String(n).split("").map(c => SUBD[+c] ?? ({ "+": "₊", "-": "₋", n: "ₙ", k: "ₖ" }[c] || c)).join("");
+const supd = n => String(n).split("").map(c => SUPD[+c] ?? ({ "-": "⁻", n: "ⁿ", k: "ᵏ" }[c] || c)).join("");
+/* 分数（約分する） */
+function red(n, d) { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d) || 1; return [n / g, d / g]; }
+function fr(n, d) { [n, d] = red(n, d); if (d === 1) return `${n}`; return `<span class="fr"><i>${n < 0 ? "−" + -n : n}</i><i>${d}</i></span>`; }
+function frs(n, d) { [n, d] = red(n, d); return d === 1 ? `${n}` : `${n}/${d}`; }
+const A = n => `a<sub>${n}</sub>`;
+const SIG = (top, bot = "k=1") => `<span class="sg">Σ</span><sup>${top}</sup><sub>${bot}</sub>`;
+/* 4 択をつくる：正解が先頭。同じものはのぞいて 4 つにそろえる */
+function choices4(right, wrongs, extra) {
+  const out = [right];
+  for (const w of wrongs) if (out.length < 4 && !out.includes(w)) out.push(w);
+  let i = 1;
+  while (out.length < 4 && extra) { const w = extra(i++); if (!out.includes(w)) out.push(w); if (i > 50) break; }
+  return out;
+}
+const numChoices = (ans, wrongs, unit = "") => choices4(ans, wrongs, i => ans + (i % 2 ? i : -i)).map(v => typeof v === "number" ? v + unit : v);
+
+/* 記録（このブラウザに保存） */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("mathb:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("mathb:" + k, JSON.stringify(v)); } catch { /* 保存できなくても動く */ } },
+};
+
+/* ===== アプリの骨組み ===== */
+const CATS = [
+  { id: "seq", name: "数列", ico: "🔢" },
+  { id: "stat", name: "統計的な推測", short: "統計", ico: "📊" },
+];
+const PARTS = [
+  { k: "intro", name: "導入" },
+  { k: "ex", name: "例題" },
+  { k: "pr", name: "類題" },
+  { k: "ap", name: "応用" },
+];
+const UNITS = [];
+const unit = u => UNITS.push(u);
+let prog = store.get("prog", {});
+const S = { u: null, pi: 0, step: 0, inst: null, solved: false, tries: 0, hint: 0, picked: [], firstOk: null, done: false };
+
+function mark(part, val = 1) {
+  const r = prog[S.u.id] || (prog[S.u.id] = {});
+  if (!r[part] || val === "ok") r[part] = val;
+  store.set("prog", prog);
+  renderUnits();
+}
+const unitClear = u => { const r = prog[u.id] || {}; return PARTS.every(p => r[p.k]); };
+
+/* 単元をひらく */
+function openUnit(id, pi = null) {
+  const u = UNITS.find(x => x.id === id) || UNITS[0];
+  S.u = u;
+  if (pi == null) { const r = prog[u.id] || {}; pi = PARTS.findIndex(p => !r[p.k]); if (pi < 0) pi = 0; }
+  store.set("last", u.id);
+  renderNav(); renderUnits();
+  goPart(pi);
+  const chip = document.querySelector(`.uchip[data-id="${u.id}"]`);
+  if (chip) chip.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+function goPart(pi, keep) {
+  S.pi = clamp(pi, 0, PARTS.length - 1); S.step = 0; S.solved = false; S.tries = 0; S.hint = 0; S.picked = []; S.firstOk = null; S.done = false;
+  const k = PARTS[S.pi].k, u = S.u;
+  if (!keep) {
+    if (k === "intro") S.inst = { p: structuredClone(u.intro.p) };
+    else if (k === "ex") S.inst = typeof u.ex === "function" ? u.ex() : u.ex;
+    else if (k === "pr") S.inst = u.pr();
+    else S.inst = typeof u.ap === "function" ? u.ap() : u.ap;
+    if (S.inst.choices) S.inst.order = shuffle(S.inst.choices.map((_, i) => i));
+  }
+  if (k === "ex") S.solved = true;
+  history.replaceState(null, "", `#${u.id}/${S.pi}`);
+  render();
+}
+const kind = () => PARTS[S.pi].k;
+const steps = () => S.inst.steps || [];
+
+function next() {
+  const k = kind();
+  if (S.done) { const i = UNITS.indexOf(S.u); openUnit(UNITS[(i + 1) % UNITS.length].id, 0); return; }
+  if (k === "intro") { mark("intro"); goPart(1); return; }
+  if (!S.solved) { reveal(); return; }
+  if (S.step < steps().length - 1) { S.step++; if (k === "ex" && S.step === steps().length - 1) mark("ex"); render(); return; }
+  if (k === "ex") mark("ex");
+  if (k === "ap") { S.done = true; render(); return; }
+  goPart(S.pi + 1);
+}
+function prev() {
+  if (S.done) { S.done = false; render(); return; }
+  if (S.solved && S.step > 0) { S.step--; render(); return; }
+  if (S.pi > 0) goPart(S.pi - 1);
+  else { const i = UNITS.indexOf(S.u); if (i > 0) openUnit(UNITS[i - 1].id, 3); }
+}
+function reveal() { S.solved = true; S.step = 0; if (S.firstOk == null) S.firstOk = false; mark(kind()); render(); }
+function choose(i) {
+  if (S.solved) return;
+  S.picked.push(i);
+  if (i === 0) {
+    if (S.firstOk == null) S.firstOk = true;
+    S.solved = true; S.step = 0; mark(kind(), S.firstOk ? "ok" : 1);
+  } else {
+    S.firstOk = false; S.tries++;
+    if (S.hint < (S.inst.hint || []).length) S.hint++;
+    if (S.tries >= 2) { S.solved = true; S.step = 0; mark(kind()); }
+  }
+  render();
+}
+
+/* ===== 画面をかく ===== */
+function renderNav() {
+  const nav = clear($("#secnav"));
+  for (const c of CATS) nav.append(h("button", { type: "button", "aria-current": S.u && S.u.cat === c.id ? "true" : "false", onclick: () => {
+    const last = store.get("last-" + c.id, null); const u = UNITS.find(x => x.id === last) || UNITS.find(x => x.cat === c.id); openUnit(u.id);
+  } }, h("span", {}, c.ico + " "), h("span", { class: c.short ? "long" : "" }, c.name), c.short ? h("span", { class: "short" }, c.short) : null));
+  store.set("last-" + S.u.cat, S.u.id);
+}
+function renderUnits() {
+  const box = clear($("#units"));
+  const list = UNITS.filter(u => u.cat === S.u.cat);
+  list.forEach((u, i) => {
+    const r = prog[u.id] || {};
+    box.append(h("button", { type: "button", class: "uchip" + (unitClear(u) ? " clear" : ""), "data-id": u.id, "aria-current": u === S.u ? "true" : "false", onclick: () => openUnit(u.id) },
+      h("b", {}, h("span", { class: "num" }, String(i + 1)), u.name),
+      h("span", { class: "pips" }, PARTS.map(p => h("i", { class: r[p.k] ? "on" : "" })))));
+  });
+}
+function render() {
+  const u = S.u, k = kind(), inst = S.inst;
+  /* 段階のタブ */
+  const st = clear($("#stepper")), r = prog[u.id] || {};
+  PARTS.forEach((p, i) => st.append(h("button", { type: "button", class: r[p.k] ? "done" : "", "aria-current": i === S.pi && !S.done ? "true" : "false", onclick: () => goPart(i) }, p.name)));
+  /* 式の帯 */
+  $("#fgen").innerHTML = `<span class="k">${u.name}</span>${u.gen}`;
+  const stp = S.solved ? steps()[S.step] : null;
+  $("#fnow").innerHTML = k === "intro" ? (u.intro.eq ? u.intro.eq(inst.p) : "") : S.done ? "" : stp ? stp.eq || "" : inst.eq0 || "";
+  /* 説明 */
+  const body = clear($("#body"));
+  if (S.done) renderSummary(body);
+  else if (k === "intro") renderIntro(body);
+  else renderProblem(body);
+  /* ボタン */
+  const nb = $("#nextBtn");
+  nb.classList.toggle("pulse", false);
+  if (S.done) nb.textContent = "次の単元へ ▶";
+  else if (k === "intro") { nb.textContent = "例題へ ▶"; }
+  else if (!S.solved) nb.textContent = "解説を見る ▶";
+  else if (S.step < steps().length - 1) { nb.textContent = "次へ ▶"; nb.classList.add("pulse"); }
+  else nb.textContent = k === "ap" ? "まとめ ▶" : `${PARTS[S.pi + 1].name}へ ▶`;
+  $("#prevBtn").disabled = S.pi === 0 && !(S.solved && S.step > 0) && UNITS.indexOf(u) === 0;
+  draw();
+}
+function partHead(body, title) {
+  body.append(h("div", { class: "ptitle" }, h("span", { class: "tag" }, PARTS[S.pi].name), h("h2", {}, title)));
+}
+function renderIntro(body) {
+  const u = S.u, I = u.intro, p = S.inst.p;
+  partHead(body, I.title);
+  body.append(h("p", { class: "lead", html: I.lead }));
+  if (I.controls) {
+    const c = h("div", { class: "ctrl" });
+    for (const ct of I.controls) {
+      if (ct.seg) {
+        c.append(h("div", { class: "seg" }, ct.seg.map(([v, lab]) => h("button", { type: "button", "aria-pressed": p[ct.key] === v ? "true" : "false", onclick: () => { p[ct.key] = v; ct.on && ct.on(p); render(); } }, lab))));
+      } else if (ct.btn) {
+        c.append(h("div", { class: "minirow" }, ct.btn.map(([lab, fn]) => h("button", { type: "button", class: "mini", onclick: () => { fn(p); render(); } }, lab))));
+      } else {
+        const out = h("output", {}, ct.fmt ? ct.fmt(p[ct.key]) : p[ct.key]);
+        const inp = h("input", { type: "range", min: ct.min, max: ct.max, step: ct.step || 1, value: p[ct.key], "aria-label": ct.label });
+        inp.addEventListener("input", () => { p[ct.key] = +inp.value; ct.on && ct.on(p); out.textContent = ct.fmt ? ct.fmt(p[ct.key]) : p[ct.key]; $("#fnow").innerHTML = I.eq ? I.eq(p) : ""; ro && (ro.innerHTML = I.say(p)); draw(); });
+        c.append(h("label", { class: "sl" }, h("span", { html: ct.label }), inp, out));
+      }
+    }
+    body.append(c);
+  }
+  const ro = I.say ? h("div", { class: "readout", html: I.say(p) }) : null;
+  if (ro) body.append(ro);
+  if (I.points) body.append(h("ul", { class: "pts ipts" }, I.points.map(t => h("li", { html: t }))));
+}
+function renderProblem(body) {
+  const inst = S.inst, k = kind();
+  partHead(body, inst.title);
+  if (inst.problem) body.append(h("div", { class: "prob", html: inst.problem }));
+  if (k !== "ex" && inst.choices) {
+    const ch = h("div", { class: "choices" + (inst.txt ? " txt one" : "") });
+    for (const i of inst.order) {
+      const b = h("button", { type: "button", class: "choice", html: inst.choices[i], onclick: () => choose(i) });
+      if (S.solved) { b.disabled = true; if (i === 0) b.classList.add("ok"); else if (S.picked.includes(i)) b.classList.add("ng"); }
+      else if (S.picked.includes(i)) { b.disabled = true; b.classList.add("ng"); }
+      ch.append(b);
+    }
+    if (!S.solved) body.append(ch);
+    if (S.solved) {
+      const msg = S.firstOk ? "⭕ 正解！" : S.picked.includes(0) ? "⭕ 正解（2 回目）" : "答え";
+      body.append(h("div", { class: "result " + (S.picked.includes(0) ? "ok" : "ng") }, msg + "　", h("span", { class: "choice ok ans", html: inst.choices[0] })));
+    } else {
+      const row = h("div", { class: "minirow" });
+      if (inst.hint && S.hint < inst.hint.length) row.append(h("button", { type: "button", class: "mini", onclick: () => { S.hint++; render(); } }, "💡 ヒント"));
+      if (S.tries === 1) body.append(h("div", { class: "result ng" }, "✕ ちがうよ。ヒントを見て もう一度"));
+      if (row.childNodes.length) body.append(row);
+    }
+    for (let i = 0; i < S.hint && !S.solved; i++) body.append(h("div", { class: "hintbox", html: "💡 " + inst.hint[i] }));
+  }
+  if (S.solved) {
+    const n = steps().length;
+    body.append(h("div", { class: "dots" }, steps().map((_, i) => h("i", { class: i === S.step ? "on" : i < S.step ? "done" : "" })), h("span", {}, ` ${S.step + 1} / ${n}`)));
+    body.append(h("div", { class: "say", html: steps()[S.step].say }));
+    if (k === "pr" && S.step === n - 1) body.append(h("div", { class: "minirow" }, h("button", { type: "button", class: "mini", onclick: () => goPart(2) }, "🔁 数字をかえて もう1問")));
+  }
+}
+function renderSummary(body) {
+  const u = S.u;
+  body.append(h("div", { class: "ptitle" }, h("span", { class: "tag" }, "まとめ"), h("h2", {}, u.name)));
+  body.append(h("div", { class: "summary" }, h("h3", {}, "おぼえること"), h("ul", { class: "pts" }, u.summary.map(t => h("li", { html: t })))));
+  if (unitClear(u)) body.append(h("div", {}, h("span", { class: "stamp" }, "合格"), h("span", { style: "margin-left:14px;font-weight:700" }, "この単元はクリア！")));
+  else {
+    const r = prog[u.id] || {}, miss = PARTS.filter(p => !r[p.k]).map(p => p.name);
+    body.append(h("p", { class: "lead" }, `のこり：${miss.join("・")}`));
+  }
+}
+
+/* ===== ステージ（図）をかく ===== */
+let svgBox = { W: 800, H: 480 };
+function draw() {
+  const stage = $("#stage"), rect = stage.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const sc = Math.max(1, 520 / rect.width, 300 / rect.height);
+  const W = Math.round(rect.width * sc), H = Math.round(rect.height * sc);
+  svgBox = { W, H };
+  const svg = s("svg", { class: "sv", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": S.u.name + "の図" });
+  const defs = s("defs", {}, svg);
+  for (const c of ["ink", "wm", "ac", "bl", "gd", "mut"]) {
+    const m = s("marker", { id: "ah-" + c, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+    s("path", { d: "M0 0L10 5L0 10z", class: c === "mut" ? "f-ln" : "f-" + c, style: c === "mut" ? "fill:var(--muted)" : null }, m);
+  }
+  const k = kind();
+  const kk = S.done ? 99 : k === "intro" ? 99 : !S.solved ? -1 : S.step;
+  const p = k === "intro" ? S.inst.p : S.inst.p;
+  $("#hint").textContent = S.done ? "" : k === "intro" ? (S.u.intro.hint || "") : !S.solved ? "まず 答えをえらぼう（図はヒント）" : "";
+  if (k === "ex") $("#hint").textContent = "「次へ ▶」で 1 ステップずつ";
+  S.u.viz(svg, p, kk, { W, H, intro: k === "intro", redraw: () => { const ro = $(".readout"); if (ro && S.u.intro.say) ro.innerHTML = S.u.intro.say(S.inst.p); if (S.u.intro.eq) $("#fnow").innerHTML = S.u.intro.eq(S.inst.p); draw(); } });
+  clear(stage).append(svg);
+}
+/* 新しく出てきたものに pop をつける */
+const nw = (k, at, cls = "pop") => (k === at ? cls : "");
+
+/* 棒グラフ（数列の項） */
+function bars(g, o) {
+  const n = o.vals.length;
+  const lo = Math.min(0, o.lo ?? Math.min(...o.vals)), hi = Math.max(0, o.hi ?? Math.max(...o.vals));
+  const span = hi - lo || 1, Y = v => o.yBot - (v - lo) / span * (o.yBot - o.yTop);
+  const slot = (o.x1 - o.x0) / n, bw = Math.min(slot * .64, o.bwMax ?? 64), X = i => o.x0 + slot * (i + .5);
+  const fs = clamp(slot * .36, 10, 17);
+  s("line", { x1: o.x0 - 6, x2: o.x1 + 6, y1: Y(0), y2: Y(0), class: "ink", "stroke-width": 1.5 }, g);
+  for (let i = 0; i < n; i++) {
+    const v = o.vals[i], y1 = Y(Math.max(v, 0)), y2 = Y(Math.min(v, 0)), hh = Math.max(y2 - y1, 2);
+    const gh = o.ghost && o.ghost(i);
+    const gi = s("g", { class: (o.pop && o.pop(i)) || "" }, g);
+    if (gh) {
+      s("rect", { x: X(i) - bw / 2, y: y1, width: bw, height: hh, rx: 2, class: "thin dash" }, gi);
+      T(gi, X(i), Math.min(y1 + hh / 2 + 6, o.yBot - 4), "?", "mut b", fs + 2);
+    } else {
+      s("rect", { x: X(i) - bw / 2, y: y1, width: bw, height: hh, rx: 2, class: (o.cls && o.cls(i)) || "f-acs s-ac", "stroke-width": 1.5 }, gi);
+      const vt = o.val ? o.val(i) : String(v);
+      if (vt != null) T(gi, X(i), v >= 0 ? y1 - 7 : y2 + fs + 3, vt, "mono b " + ((o.vcls && o.vcls(i)) || ""), fs);
+    }
+    if (o.lab) T(g, X(i), o.labY ?? (Y(lo) + 20), o.lab(i), "mono " + ((o.lcls && o.lcls(i)) || "mut"), clamp(fs * .9, 10, 15));
+  }
+  return { X, Y, bw, slot, fs };
+}
+/* 矢印（曲線） */
+function arc(g, x1, y1, x2, y2, c = "wm", bend = -26, cls = "") {
+  const mx = (x1 + x2) / 2, my = Math.min(y1, y2) + bend;
+  return s("path", { d: `M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}`, class: `f-none s-${c} ${cls}`, "stroke-width": 2, "marker-end": `url(#ah-${c})` }, g);
+}
+function arrow(g, x1, y1, x2, y2, c = "ink", w = 2, cls = "") {
+  return s("line", { x1, y1, x2, y2, class: `s-${c} ${cls}`, "stroke-width": w, "marker-end": `url(#ah-${c})` }, g);
+}
+/* 下かっこ（ブレース） */
+function brace(g, x1, x2, y, label, c = "wm", up = false, fs = 15) {
+  const d = up ? -10 : 10, m = (x1 + x2) / 2;
+  s("path", { d: `M${x1} ${y} q0 ${d} 10 ${d} L${m - 8} ${y + d} q8 0 8 ${d} q0 ${-d} 8 ${-d} L${x2 - 10} ${y + d} q10 0 10 ${-d}`, class: `f-none s-${c}`, "stroke-width": 2 }, g);
+  if (label) T(g, m, y + (up ? -26 : 2 * d + 16), label, "b t" + c[0], fs);
+}
+/* ラベルの札 */
+function badge(g, x, y, str, cls = "f-wm", tcls = "tp", fs = 15, anchor = "middle") {
+  const gg = s("g", {}, g);
+  const w = textW(str, fs) + 14;
+  const bx = anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w + 7 : x - 7;
+  s("rect", { x: bx, y: y - fs - 1, width: w, height: fs + 9, rx: 4, class: cls }, gg);
+  T(gg, x, y, str, "b " + tcls, fs, anchor);
+  return gg;
+}
+const textW = (str, fs) => [...String(str)].reduce((w, c) => w + (c.charCodeAt(0) > 255 ? fs : fs * .6), 0);
+/* 正規分布などの曲線の面積を塗る */
+function curvePath(f, xa, xb, X, Y, n = 120, close = false) {
+  let d = "";
+  for (let i = 0; i <= n; i++) { const x = xa + (xb - xa) * i / n; d += (i ? "L" : "M") + X(x).toFixed(1) + " " + Y(f(x)).toFixed(1); }
+  if (close) d += `L${X(xb).toFixed(1)} ${Y(0).toFixed(1)}L${X(xa).toFixed(1)} ${Y(0).toFixed(1)}Z`;
+  return d;
+}
+const npdf = (x, m, sd) => Math.exp(-((x - m) ** 2) / (2 * sd * sd)) / (sd * Math.sqrt(2 * Math.PI));
+</script>
+<script>
+"use strict";
+/* ===================== 数列 ===================== */
+
+/* --- 等差数列・等比数列：棒グラフで「+d」「×r」を見る --- */
+const rStr = r => r === .5 ? "1/2" : r < 0 ? `(${r})` : String(r);
+function seqViz(svg, p, k, box, op) {
+  const { W, H } = box, g = s("g", {}, svg), full = k >= 99, kn = p.mode === "known";
+  const vals = range(1, p.N).map(i => op === "add" ? p.a + (i - 1) * p.d : p.a * p.r ** (i - 1));
+  const vis = i => full || (kn ? (k >= 3 || p.known.includes(i + 1) || (k >= 2 && i === 0)) : (k >= 1 || i === 0));
+  const isT = i => !kn && i + 1 === p.n && (full || k >= 2);
+  const popI = i => kn ? ((k === 3 && !p.known.includes(i + 1) && i !== 0) || (k === 2 && i === 0) ? "grow" : "") : (k === 1 && i > 0 ? "grow" : "");
+  const yBot = H - 92;
+  const B = bars(g, {
+    vals, x0: 60, x1: W - 40, yTop: 100, yBot, bwMax: 58,
+    lab: i => "a" + subd(i + 1), lcls: i => isT(i) || (kn && p.known.includes(i + 1)) ? "tw b" : "mut",
+    cls: i => isT(i) ? "f-wms s-wm" : kn && p.known.includes(i + 1) ? "f-wms s-wm" : i === 0 ? "f-bls s-bl" : "f-acs s-ac",
+    ghost: i => !vis(i), pop: popI, val: i => fmt(vals[i], 3),
+  });
+  const top = i => Math.min(B.Y(vals[i]), B.Y(0)) - 26;
+  const fwd = op === "add" ? (p.d < 0 ? "−" + -p.d : "+" + p.d) : "×" + rStr(p.r);
+  const back = op === "add" ? (p.d < 0 ? "+" + -p.d : "−" + p.d) : "÷" + rStr(p.r);
+  const jump = (i, j, lab, cls) => {
+    const x1 = B.X(i) + B.bw * .3, x2 = B.X(j) - B.bw * .3 * Math.sign(j - i);
+    const y1 = top(i) + 4, y2 = top(j) + 4;
+    arc(g, x1, y1, x2, y2, "wm", -22, cls);
+    T(g, (x1 + x2) / 2, Math.min(y1, y2) - 16, lab, "mono b tw " + cls, clamp(B.slot * .3, 11, 16));
+  };
+  if (kn) {
+    const [a, b] = p.known.map(v => v - 1);
+    if (k === 1 || k === 2) for (let i = a; i < b; i++) jump(i, i + 1, fwd, k === 1 ? "fadein" : "");
+    if (k === 2) for (let i = a; i > 0; i--) jump(i, i - 1, back, "fadein");
+    if (k >= 3 || full) for (let i = 0; i < p.N - 1; i++) jump(i, i + 1, fwd, k === 3 ? "fadein" : "");
+    if (k === 1) brace(g, B.X(a), B.X(b), yBot + 34, `${fwd} が ${b - a} 回`, "wm");
+  } else {
+    if (full || k >= 1) for (let i = 0; i < p.N - 1; i++) jump(i, i + 1, fwd, k === 1 ? "fadein" : "");
+    if ((full || k >= 2) && p.n > 1) brace(g, B.X(0), B.X(p.n - 1), yBot + 34, `${fwd} が ${p.n - 1} 回`, "wm");
+  }
+}
+
+unit({
+  id: "u-arith", cat: "seq", name: "等差数列", sub: "同じ数ずつ たす",
+  gen: `a<sub>n</sub> = <span class="cb">a</span> + (n − 1)<span class="cw">d</span>`,
+  viz: (svg, p, k, box) => seqViz(svg, p, k, box, "add"),
+  intro: {
+    title: "等差数列とは", hint: "スライダーで 初項・公差・n を動かそう",
+    lead: "となりとの差が いつも同じ（<b>公差 d</b>）数列。棒が <b>同じ高さずつ</b> のびていく。",
+    p: { a: 2, d: 3, N: 10, n: 7 },
+    controls: [
+      { key: "a", label: "初項 a", min: -5, max: 10 },
+      { key: "d", label: "公差 d", min: -4, max: 6 },
+      { key: "n", label: "第 n 項", min: 1, max: 10 },
+    ],
+    eq: p => `a<sub>${p.n}</sub> = ${p.a} + (${p.n} − 1) × ${p.d < 0 ? `(${p.d})` : p.d} = <b class="cw">${p.a + (p.n - 1) * p.d}</b>`,
+    say: p => `a<sub>1</sub> から a<sub>${p.n}</sub> へは、すきまが <b>${p.n - 1} 個</b>。だから d を ${p.n - 1} 回たす。`,
+    points: ["棒の数ではなく <b>すきまの数（n − 1）</b> だけ d をたす", "d がマイナスだと 棒は だんだん下がる"],
+  },
+  ex: {
+    title: "第 10 項を求める", problem: "初項 3、公差 4 の等差数列の <b>第 10 項</b> を求めよ。",
+    p: { a: 3, d: 4, N: 10, n: 10 },
+    steps: [
+      { say: "初項 <b>a = 3</b>（青い棒）、公差 <b>d = 4</b>（となりとの差）を読みとる。", eq: "a = 3,  d = 4" },
+      { say: "となりへ進むたびに <b>+4</b>。棒が 同じ高さずつ のびていく。", eq: "3 → 7 → 11 → 15 → …" },
+      { say: "a<sub>1</sub> から a<sub>10</sub> までは +4 が <b>10 − 1 = 9 回</b>（すきまの数！）。", eq: `a<sub>10</sub> = 3 + (10 − 1) × 4 = 3 + 36 = <b class="cw">39</b>` },
+    ],
+  },
+  pr: () => {
+    const a = ri(1, 9), d = ri(2, 6), n = ri(6, 10), ans = a + (n - 1) * d;
+    return {
+      title: `第 ${n} 項を求める`, problem: `初項 ${a}、公差 ${d} の等差数列の <b>第 ${n} 項</b> は？`,
+      p: { a, d, N: n, n }, choices: numChoices(ans, [a + n * d, n * d, a + (n - 2) * d]),
+      hint: [`a<sub>1</sub> から a<sub>${n}</sub> まで、+${d} を何回する？`, `すきまの数は ${n} − 1 = ${n - 1}`],
+      steps: [
+        { say: `初項 <b>a = ${a}</b>、公差 <b>d = ${d}</b>。`, eq: `a = ${a},  d = ${d}` },
+        { say: `となりへ進むたびに <b>+${d}</b>。`, eq: `${a} → ${a + d} → ${a + 2 * d} → …` },
+        { say: `+${d} を <b>${n - 1} 回</b>。`, eq: `a<sub>${n}</sub> = ${a} + ${n - 1} × ${d} = <b class="cw">${ans}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "2 つの項から一般項", problem: "第 3 項が 11、第 7 項が 23 である等差数列の 一般項 a<sub>n</sub> は？",
+    p: { a: 5, d: 3, N: 8, mode: "known", known: [3, 7] },
+    choices: ["a<sub>n</sub> = 3n + 2", "a<sub>n</sub> = 3n + 5", "a<sub>n</sub> = 4n − 1", "a<sub>n</sub> = 3n − 1"],
+    hint: ["a<sub>3</sub> と a<sub>7</sub> の間に +d は何回ある？", "4d = 23 − 11"],
+    steps: [
+      { say: "わかっているのは a<sub>3</sub> = 11 と a<sub>7</sub> = 23 の 2 本の棒だけ。", eq: "a<sub>3</sub> = 11,  a<sub>7</sub> = 23" },
+      { say: "a<sub>3</sub> → a<sub>7</sub> は すきまが <b>4 つ</b>。23 − 11 = 12 を 4 等分して <b>d = 3</b>。", eq: "4d = 23 − 11 = 12  →  d = 3" },
+      { say: "a<sub>3</sub> から 2 つもどると a<sub>1</sub>。11 − 2 × 3 = <b>5</b>。", eq: "a<sub>1</sub> = 11 − 2 × 3 = 5" },
+      { say: "a<sub>n</sub> = 5 + (n − 1) × 3 = <b>3n + 2</b>。全部の棒がそろった！", eq: `a<sub>n</sub> = 5 + (n − 1)·3 = <b class="cw">3n + 2</b>` },
+    ],
+  },
+  summary: ["a<sub>n</sub> = a + (n − 1)d", "d をたす回数は <b>すきまの数 n − 1</b>", "2 つの項がわかれば、差 ÷ すきまの数 で d が出る"],
+});
+
+/* --- 等差数列の和：階段を逆さに重ねて長方形 --- */
+function asumViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg);
+  const lv = box.intro && p.show != null ? p.show : k >= 99 ? 3 : k;
+  const n = p.n, vals = range(0, n - 1).map(i => p.a + i * p.d), l = vals[n - 1], tot = p.a + l, Sn = n * tot / 2;
+  const x0 = 110, x1 = W - 40, yTop = 86, yBot = H - 76;
+  const slot = (x1 - x0) / n, bw = slot * .92, u = (yBot - yTop) / tot, X = i => x0 + slot * i + (slot - bw) / 2;
+  const fs = clamp(slot * .36, 9, 16), grid = u >= 7 && slot >= 9;
+  const col = (i, v, y, cls, extra) => {
+    const gg = s("g", { class: extra || "" }, g);
+    s("rect", { x: X(i), y, width: bw, height: v * u, class: cls, "stroke-width": 1.5 }, gg);
+    if (grid) for (let j = 1; j < v; j++) s("line", { x1: X(i), x2: X(i) + bw, y1: y + j * u, y2: y + j * u, class: cls.split(" ")[1], "stroke-width": .6, opacity: .5 }, gg);
+    return gg;
+  };
+  for (let i = 0; i < n; i++) {
+    const v = vals[i];
+    col(i, v, yBot - v * u, lv >= 3 ? "f-acs s-ac" : "f-acs s-ac");
+    if (slot >= 18) T(g, X(i) + bw / 2, lv >= 1 ? yBot - v * u / 2 + fs / 3 : yBot - v * u - 6, String(v), "mono b ta", fs);
+  }
+  if (lv >= 1) for (let i = 0; i < n; i++) {
+    const v = vals[n - 1 - i];
+    col(i, v, yBot - tot * u, "f-wms s-wm", lv === 1 ? "drop" : "");
+    if (slot >= 18) T(g, X(i) + bw / 2, yBot - tot * u + v * u / 2 + fs / 3, String(v), "mono b tw " + (lv === 1 ? "drop" : ""), fs);
+  }
+  if (lv >= 2) {
+    s("rect", { x: x0, y: yBot - tot * u, width: x1 - x0, height: tot * u, class: "ink fadein", "stroke-width": 2.5 }, g);
+    brace(g, x0, x1, yBot + 8, `${n} 本`, "ink");
+    s("line", { x1: x0 - 14, x2: x0 - 14, y1: yBot - tot * u, y2: yBot, class: "ink" }, g);
+    T(g, x0 - 22, (yBot + yBot - tot * u) / 2 - 4, "a + l", "b tw", 15, "end");
+    T(g, x0 - 22, (yBot + yBot - tot * u) / 2 + 16, `= ${tot}`, "mono b", 15, "end");
+  }
+  if (lv >= 3) badge(g, (x0 + x1) / 2, Math.max(yTop - 30, 64), `緑の階段 = ${n} × ${tot} ÷ 2 = ${fmt(Sn)}`, "f-ac", "tp", 16).classList.add("pop");
+  else if (lv >= 2) T(g, (x0 + x1) / 2, Math.max(yTop - 30, 64), `長方形 = ${n} × ${tot} = ${n * tot}`, "b mono", 16);
+}
+unit({
+  id: "u-asum", cat: "seq", name: "等差数列の和", sub: "逆さに重ねて 長方形",
+  gen: `S<sub>n</sub> = <span class="fr"><i>n(<span class="ca">a</span> + <span class="cw">l</span>)</i><i>2</i></span>  （l は末項）`,
+  viz: asumViz,
+  intro: {
+    title: "和は 階段の面積", hint: "下のボタンで 1 段ずつ見よう",
+    lead: "和を <b>階段の面積</b> と考える。同じ階段を <b>逆さに重ねる</b> と長方形になる。",
+    p: { a: 1, d: 2, n: 8, show: 0 },
+    controls: [
+      { seg: [[0, "① 階段"], [1, "② 逆さに重ねる"], [2, "③ 長方形"], [3, "④ 半分"]], key: "show" },
+      { key: "a", label: "初項 a", min: 1, max: 6 },
+      { key: "d", label: "公差 d", min: 0, max: 4 },
+      { key: "n", label: "項数 n", min: 2, max: 14 },
+    ],
+    eq: p => { const l = p.a + (p.n - 1) * p.d; return `S = ${p.n} × (${p.a} + ${l}) ÷ 2 = <b class="cw">${fmt(p.n * (p.a + l) / 2)}</b>`; },
+    say: p => `どの列も <b>a + l = ${p.a} + ${p.a + (p.n - 1) * p.d}</b> で同じ高さ。`,
+  },
+  ex: {
+    title: "3 + 5 + 7 + … + 21", problem: "等差数列 3, 5, 7, …, 21 の和を求めよ。（項は 10 個）",
+    p: { a: 3, d: 2, n: 10 },
+    steps: [
+      { say: "和を <b>階段の面積</b> と考える。左から 3, 5, 7, …, 21。", eq: "S = 3 + 5 + 7 + … + 21" },
+      { say: "同じ階段を <b>逆さにして</b> 上に重ねる。どの列も 3 + 21 = <b>24</b> になる！", eq: "S = 21 + 19 + … + 3（逆から）" },
+      { say: "できた長方形は たて 24、よこ 10 本。", eq: "2S = 10 × (3 + 21) = 240" },
+      { say: "階段 2 つ分が 240。1 つ分は その半分。", eq: `S = 240 ÷ 2 = <b class="cw">120</b>` },
+    ],
+  },
+  pr: () => {
+    const a = ri(1, 6), d = ri(1, 4), n = ri(5, 12), l = a + (n - 1) * d, S = n * (a + l) / 2;
+    return {
+      title: "和を求める", problem: `初項 ${a}、公差 ${d} の等差数列の、初項から <b>第 ${n} 項まで の和</b> は？`,
+      p: { a, d, n }, choices: numChoices(S, [n * (a + l), S - l, S + l + d]),
+      hint: [`まず 末項 l = a<sub>${n}</sub> を求めよう`, `S = n(a + l) ÷ 2`],
+      steps: [
+        { say: `末項 l = ${a} + (${n} − 1) × ${d} = <b>${l}</b>。`, eq: `l = ${a} + ${n - 1} × ${d} = ${l}` },
+        { say: `逆さに重ねると どの列も ${a} + ${l} = <b>${a + l}</b>。`, eq: `どの列も ${a + l}` },
+        { say: `長方形 = ${n} × ${a + l} = ${n * (a + l)}。`, eq: `2S = ${n} × ${a + l}` },
+        { say: `その半分が 和。`, eq: `S = ${n * (a + l)} ÷ 2 = <b class="cw">${S}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "奇数の和", problem: "1 から 99 までの奇数の和 1 + 3 + 5 + … + 99 は？",
+    p: { a: 1, d: 2, n: 50 }, choices: ["2500", "5000", "2550", "2450"],
+    hint: ["まず 項の数 n を求めよう（99 は第何項？）", "a = 1, l = 99 を S = n(a + l) ÷ 2 へ"],
+    steps: [
+      { say: "項の数：99 = 1 + (n − 1) × 2 より <b>n = 50</b> 個。", eq: "99 = 1 + (n − 1)·2  →  n = 50" },
+      { say: "逆さに重ねると、どの列も 1 + 99 = <b>100</b>。", eq: "どの列も 100" },
+      { say: "長方形 = 50 × 100 = 5000。", eq: "2S = 50 × 100 = 5000" },
+      { say: "半分で <b>2500</b>。（= 50²。奇数の和は 平方数！）", eq: `S = <b class="cw">2500</b>` },
+    ],
+  },
+  summary: ["S = n(a + l) ÷ 2（l がわからないとき S = n{2a + (n − 1)d} ÷ 2）", "逆さに重ねると <b>どの列も a + l</b> → 長方形の半分", "まず <b>項の数 n</b> を正しく数える"],
+});
+
+unit({
+  id: "u-geo", cat: "seq", name: "等比数列", sub: "同じ数ずつ かける",
+  gen: `a<sub>n</sub> = <span class="cb">a</span> · <span class="cw">r</span><sup>n−1</sup>`,
+  viz: (svg, p, k, box) => seqViz(svg, p, k, box, "mul"),
+  intro: {
+    title: "等比数列とは", hint: "公比 r をかえて 棒の のび方を見よう",
+    lead: "となりへ いつも同じ数（<b>公比 r</b>）を <b>かける</b> 数列。等差（たす）より ずっと急に のびる。",
+    p: { a: 1, r: 2, N: 8, n: 6 },
+    controls: [
+      { key: "a", label: "初項 a", min: 1, max: 5 },
+      { seg: [[2, "r = 2"], [3, "r = 3"], [.5, "r = 1/2"], [-2, "r = −2"]], key: "r" },
+      { key: "n", label: "第 n 項", min: 1, max: 8 },
+    ],
+    eq: p => `a<sub>${p.n}</sub> = ${p.a} × ${rStr(p.r)}<sup>${p.n - 1}</sup> = <b class="cw">${fmt(p.a * p.r ** (p.n - 1), 4)}</b>`,
+    say: p => p.r === .5 ? "r = 1/2 だと 半分ずつ小さくなり、0 に近づく。" : p.r < 0 ? "r がマイナスだと 符号が <b>交互に</b> 入れかわる。" : `×${p.r} を ${p.n - 1} 回。<b>${p.r}<sup>${p.n - 1}</sup></b> 倍になる。`,
+    points: ["かける回数も <b>すきまの数 n − 1</b>", "等差は「+d」、等比は「×r」"],
+  },
+  ex: {
+    title: "第 6 項を求める", problem: "初項 3、公比 2 の等比数列の <b>第 6 項</b> を求めよ。",
+    p: { a: 3, r: 2, N: 6, n: 6 },
+    steps: [
+      { say: "初項 <b>a = 3</b>、公比 <b>r = 2</b>（となりへ ×2）。", eq: "a = 3,  r = 2" },
+      { say: "となりへ進むたびに <b>×2</b>。棒が どんどん大きくなる。", eq: "3 → 6 → 12 → 24 → …" },
+      { say: "a<sub>1</sub> から a<sub>6</sub> までは ×2 が <b>5 回</b>。", eq: `a<sub>6</sub> = 3 × 2<sup>5</sup> = 3 × 32 = <b class="cw">96</b>` },
+    ],
+  },
+  pr: () => {
+    const a = ri(1, 5), r = ri(2, 3), n = r === 3 ? ri(4, 5) : ri(4, 6), ans = a * r ** (n - 1);
+    return {
+      title: `第 ${n} 項を求める`, problem: `初項 ${a}、公比 ${r} の等比数列の <b>第 ${n} 項</b> は？`,
+      p: { a, r, N: n, n }, choices: numChoices(ans, [a * r ** n, a * r * (n - 1), a + r * (n - 1), a * r ** (n - 2)]),
+      hint: [`×${r} を何回する？`, `すきまの数は ${n - 1}。a × r<sup>${n - 1}</sup>`],
+      steps: [
+        { say: `初項 <b>a = ${a}</b>、公比 <b>r = ${r}</b>。`, eq: `a = ${a},  r = ${r}` },
+        { say: `となりへ <b>×${r}</b>。`, eq: `${a} → ${a * r} → ${a * r * r} → …` },
+        { say: `×${r} を <b>${n - 1} 回</b>。`, eq: `a<sub>${n}</sub> = ${a} × ${r}<sup>${n - 1}</sup> = <b class="cw">${ans}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "2 つの項から一般項", problem: "第 2 項が 6、第 5 項が 48 である等比数列（公比は実数）の 一般項 a<sub>n</sub> は？",
+    p: { a: 3, r: 2, N: 6, mode: "known", known: [2, 5] },
+    choices: ["a<sub>n</sub> = 3·2<sup>n−1</sup>", "a<sub>n</sub> = 6·2<sup>n−1</sup>", "a<sub>n</sub> = 2·3<sup>n−1</sup>", "a<sub>n</sub> = 3·2<sup>n</sup>"],
+    hint: ["a<sub>2</sub> から a<sub>5</sub> まで ×r を何回する？", "r<sup>3</sup> = 48 ÷ 6"],
+    steps: [
+      { say: "わかっているのは a<sub>2</sub> = 6、a<sub>5</sub> = 48。", eq: "a<sub>2</sub> = 6,  a<sub>5</sub> = 48" },
+      { say: "a<sub>2</sub> → a<sub>5</sub> は ×r が <b>3 回</b>。r<sup>3</sup> = 48 ÷ 6 = 8 だから <b>r = 2</b>。", eq: "6 × r<sup>3</sup> = 48  →  r<sup>3</sup> = 8  →  r = 2" },
+      { say: "a<sub>2</sub> から 1 つもどる（÷2）と a<sub>1</sub> = <b>3</b>。", eq: "a<sub>1</sub> = 6 ÷ 2 = 3" },
+      { say: "a<sub>n</sub> = <b>3·2<sup>n−1</sup></b>。", eq: `a<sub>n</sub> = <b class="cw">3·2<sup>n−1</sup></b>` },
+    ],
+  },
+  summary: ["a<sub>n</sub> = a·r<sup>n−1</sup>", "×r の回数は <b>n − 1</b>", "2 つの項の比 → r<sup>(すきまの数)</sup>"],
+});
+
+/* --- 等比数列の和：S と rS をずらしてならべ、引くと消える --- */
+function gsumViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg);
+  const lv = box.intro && p.show != null ? p.show : k >= 99 ? 3 : k;
+  const n = p.n, a = p.a, r = p.r, t = range(0, n).map(i => a * r ** i);
+  const cols = p.mode === "cum" ? n : n + 1;
+  const cw = Math.min(92, (W - 130) / cols), x0 = Math.max(96, (W - cols * cw) / 2 + 30), th = clamp(H * .11, 40, 58);
+  const yS = Math.max(96, H * .26), yR = yS + th + 54;
+  const tfs = v => clamp(Math.min(cw * .86 / (String(v).length * .62), 19), 9, 19);
+  const tile = (i, y, v, cls, tcls, extra) => {
+    const gg = s("g", { class: extra || "" }, g);
+    s("rect", { x: x0 + i * cw + 3, y, width: cw - 6, height: th, rx: 4, class: cls, "stroke-width": 1.8 }, gg);
+    T(gg, x0 + i * cw + cw / 2, y + th / 2 + tfs(v) / 3, String(v), "mono b " + tcls, tfs(v));
+    return gg;
+  };
+  T(g, x0 - 16, yS + th / 2 + 8, "S", "disp", 24, "end");
+  for (let i = 0; i < n; i++) {
+    const gone = lv >= 2 && p.mode !== "cum" && i > 0;
+    tile(i, yS, t[i], gone ? "f-chip s-ln" : i === 0 && lv >= 2 ? "f-wms s-wm" : "f-acs s-ac", gone ? "mut" : "ta", gone ? "" : "");
+    if (i > 0) T(g, x0 + i * cw, yS + th / 2 + 6, "+", "b mut", 16);
+  }
+  if (p.mode === "cum") {
+    if (lv >= 1) {
+      let c = 0;
+      for (let i = 0; i < n; i++) {
+        c += t[i];
+        const hit = lv >= 2 && c === p.target;
+        badge(g, x0 + i * cw + cw / 2, yR + 10, String(c), hit ? "f-wm" : "f-chip", hit ? "tp" : "", clamp(tfs(c), 10, 17)).classList.add(lv === 1 ? "pop" : "x");
+        arrow(g, x0 + i * cw + cw / 2, yS + th + 4, x0 + i * cw + cw / 2, yR - 14, "mut", 1.4);
+      }
+      T(g, x0 - 16, yR + 6, "ここまでの和", "b mut", 14, "end");
+    }
+    if (lv >= 2) T(g, W / 2, yR + 64, `3ⁿ − 1 = ${p.target}  →  3ⁿ = ${p.target + 1}  →  n = 4`, "mono b tw pop", 18);
+    return;
+  }
+  if (lv >= 1) {
+    T(g, x0 - 16, yR + th / 2 + 8, "rS", "disp", 24, "end");
+    for (let i = 1; i <= n; i++) {
+      const gone = lv >= 2 && i < n;
+      tile(i, yR, t[i], gone ? "f-chip s-ln" : i === n && lv >= 2 ? "f-wms s-wm" : "f-bls s-bl", gone ? "mut" : "tb", lv === 1 ? "drop" : "");
+      if (lv === 1) arrow(g, x0 + (i - 1) * cw + cw * .6, yS + th + 3, x0 + i * cw + cw * .35, yR - 3, "bl", 1.4, "fadein");
+    }
+    if (lv === 1) T(g, x0 + cw * .95, yS + th + 30, "×" + r, "mono b tb", 15, "start");
+  }
+  if (lv >= 2) {
+    for (let i = 1; i < n; i++) {
+      const cx = x0 + i * cw + cw / 2;
+      s("line", { x1: cx - cw * .3, y1: yS + th + 6, x2: cx + cw * .3, y2: yR - 6, class: "s-wm draw", "stroke-width": 2.5 }, g);
+      s("line", { x1: cx + cw * .3, y1: yS + th + 6, x2: cx - cw * .3, y2: yR - 6, class: "s-wm draw", "stroke-width": 2.5 }, g);
+    }
+    if (n > 1) T(g, x0 + (n * cw) / 2 + cw / 2, yR + th + 26, "たてに同じ数 → ひくと消える", "b tw", 15);
+    T(g, W / 2, yR + th + 60, `rS − S = ${t[n]} − ${a}`, "mono b", 19);
+  }
+  if (lv >= 3) {
+    const S = a * (r ** n - 1) / (r - 1);
+    badge(g, W / 2, yR + th + 98, r === 2 ? `S = ${t[n]} − ${a} = ${S}` : `(${r} − 1)S = ${t[n] - a}  →  S = ${S}`, "f-ac", "tp", 17).classList.add("pop");
+  }
+}
+unit({
+  id: "u-gsum", cat: "seq", name: "等比数列の和", sub: "ずらして ひくと消える",
+  gen: `S<sub>n</sub> = <span class="fr"><i><span class="cb">a</span>(<span class="cw">r</span><sup>n</sup> − 1)</i><i><span class="cw">r</span> − 1</i></span>  （r ≠ 1）`,
+  viz: gsumViz,
+  intro: {
+    title: "S − rS のしくみ", hint: "ボタンで 1 段ずつ進めよう",
+    lead: "S を r 倍して <b>1 つずらす</b> と、たてに同じ数がならぶ。ひくと <b>両はし以外 全部消える</b>。",
+    p: { a: 1, r: 2, n: 5, show: 0 },
+    controls: [
+      { seg: [[0, "① S"], [1, "② rS をずらす"], [2, "③ ひく"], [3, "④ 和"]], key: "show" },
+      { key: "a", label: "初項 a", min: 1, max: 5 },
+      { key: "r", label: "公比 r", min: 2, max: 4 },
+      { key: "n", label: "項数 n", min: 2, max: 7 },
+    ],
+    eq: p => `S = <span class="fr"><i>${p.a}(${p.r}<sup>${p.n}</sup> − 1)</i><i>${p.r} − 1</i></span> = <b class="cw">${p.a * (p.r ** p.n - 1) / (p.r - 1)}</b>`,
+    say: p => `rS − S をすると、のこるのは <b>${p.a * p.r ** p.n}</b> と <b>${p.a}</b> だけ。`,
+  },
+  ex: {
+    title: "1 + 2 + 4 + … + 128", problem: "1 + 2 + 4 + 8 + … + 128（8 項）の和を求めよ。",
+    p: { a: 1, r: 2, n: 8 },
+    steps: [
+      { say: "和 S を タイルでならべる。1, 2, 4, …, 128。", eq: "S = 1 + 2 + 4 + … + 128" },
+      { say: "全部を <b>×2</b> した 2S を、<b>1 つ右にずらして</b> 下にならべる。", eq: "2S = 2 + 4 + … + 128 + 256" },
+      { say: "たてに同じ数が そろう。2S − S で <b>ほとんど消える！</b> 残るのは 256 と 1 だけ。", eq: "2S − S = 256 − 1" },
+      { say: "S = <b>255</b>。公式 a(r<sup>n</sup> − 1)/(r − 1) = 1·(2<sup>8</sup> − 1)/(2 − 1) と同じ。", eq: `S = <b class="cw">255</b>` },
+    ],
+  },
+  pr: () => {
+    const a = ri(1, 4), r = ri(2, 3), n = r === 3 ? ri(3, 5) : ri(4, 6), S = a * (r ** n - 1) / (r - 1);
+    return {
+      title: "和を求める", problem: `初項 ${a}、公比 ${r} の等比数列の、初項から <b>第 ${n} 項まで の和</b> は？`,
+      p: { a, r, n }, choices: numChoices(S, [a * (r ** n - 1), a * (r ** (n + 1) - 1) / (r - 1), a * r ** n, S - a]),
+      hint: ["S を r 倍して 1 つずらし、ひいてみよう", `S = a(r<sup>n</sup> − 1) ÷ (r − 1)`],
+      steps: [
+        { say: `S = ${range(0, n - 1).map(i => a * r ** i).join(" + ")}`, eq: `S = ${range(0, n - 1).map(i => a * r ** i).join(" + ")}` },
+        { say: `${r} 倍して 1 つずらす。`, eq: `${r}S = ${range(1, n).map(i => a * r ** i).join(" + ")}` },
+        { say: "たての同じ数が消えて、両はしだけ のこる。", eq: `${r}S − S = ${a * r ** n} − ${a} = ${a * r ** n - a}` },
+        { say: `${r - 1 === 1 ? "" : `${r - 1} でわって `}和が出る。`, eq: `S = <b class="cw">${S}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "和が 80 になるのは", problem: "初項 2、公比 3 の等比数列で、初項から第 n 項までの和が <b>80</b> になる n は？",
+    p: { a: 2, r: 3, n: 5, mode: "cum", target: 80 }, choices: ["n = 4", "n = 5", "n = 3", "n = 40"],
+    hint: ["和を順に計算してみよう：2, 2 + 6, …", "公式：2(3<sup>n</sup> − 1)/(3 − 1) = 3<sup>n</sup> − 1"],
+    steps: [
+      { say: "タイルをならべる：2, 6, 18, 54, 162 …", eq: "2, 6, 18, 54, 162, …" },
+      { say: "ここまでの和を下に書く：2, 8, 26, <b>80</b>, 242", eq: "S<sub>4</sub> = 2 + 6 + 18 + 54 = 80" },
+      { say: "公式でも：2(3<sup>n</sup> − 1)/(3 − 1) = 3<sup>n</sup> − 1 = 80 → 3<sup>n</sup> = 81 → <b>n = 4</b>", eq: `3<sup>n</sup> = 81  →  <b class="cw">n = 4</b>` },
+    ],
+  },
+  summary: ["S = a(r<sup>n</sup> − 1) ÷ (r − 1)（r = 1 なら S = na）", "S と rS を <b>ずらして ひく</b> と 両はしだけ のこる", "r &lt; 1 のときは a(1 − r<sup>n</sup>) ÷ (1 − r) が使いやすい"],
+});
+
+/* --- Σ：k は階段、k² は正方形、ak + b は 2 色の棒 --- */
+function sigmaViz(svg, p, k, box) {
+  const lv = box.intro ? 3 : k >= 99 ? 3 : k;
+  if (p.type === "k") return asumViz(svg, { a: 1, d: 1, n: p.n, show: box.intro ? 3 : null }, box.intro ? 99 : k, box);
+  const { W, H } = box, g = s("g", {}, svg), n = p.n;
+  if (p.type === "lin") {
+    const a = p.ca, b = p.cb, vals = range(1, n).map(j => a * j + b);
+    const x0 = 80, x1 = W - 40, yTop = 150, yBot = H - 70, slot = (x1 - x0) / n, bw = Math.min(slot * .72, 60);
+    const u = (yBot - yTop) / (a * n + b), X = i => x0 + slot * (i + .5);
+    for (let i = 0; i < n; i++) {
+      const j = i + 1, ha = a * j * u, hb = b * u;
+      s("rect", { x: X(i) - bw / 2, y: yBot - ha, width: bw, height: ha, class: "f-acs s-ac", "stroke-width": 1.5 }, g);
+      s("rect", { x: X(i) - bw / 2, y: yBot - ha - hb, width: bw, height: hb, class: (lv >= 1 ? "f-bls s-bl" : "f-acs s-ac") + (lv === 1 ? " fadein" : ""), "stroke-width": 1.5 }, g);
+      if (u >= 7) for (let q = 1; q < a * j + b; q++) s("line", { x1: X(i) - bw / 2, x2: X(i) + bw / 2, y1: yBot - q * u, y2: yBot - q * u, class: q < a * j ? "s-ac" : "s-bl", "stroke-width": .6, opacity: .5 }, g);
+      T(g, X(i), yBot - ha - hb - 7, String(vals[i]), "mono b", 15);
+      T(g, X(i), yBot + 20, "k=" + j, "mono mut", 13);
+    }
+    s("line", { x1: x0 - 6, x2: x1 + 6, y1: yBot, y2: yBot, class: "ink" }, g);
+    if (lv >= 1) { T(g, x0, 78, `■ ${a}k の部分`, "b ta", 15, "start"); T(g, x0 + 170, 78, `■ ${b} の部分`, "b tb", 15, "start"); }
+    if (lv >= 2) { T(g, x0, 102, `Σ ${a}k = ${a} × ${n * (n + 1) / 2} = ${a * n * (n + 1) / 2}`, "mono b ta pop", 15, "start"); T(g, x0 + 290, 102, `Σ ${b} = ${b} × ${n} = ${b * n}`, "mono b tb pop", 15, "start"); }
+    if (lv >= 3) badge(g, W - 50, 102, `合計 ${a * n * (n + 1) / 2 + b * n}`, "f-wm", "tp", 17, "end").classList.add("pop");
+    return;
+  }
+  /* k²：1 辺 k の正方形 */
+  const tot = n * (n + 1) / 2, gap = 8;
+  const u = Math.min((W - 80 - gap * (n - 1)) / tot, (H - 190) / n);
+  let x = (W - (tot * u + gap * (n - 1))) / 2; const yBot = H - 80;
+  let acc = 0;
+  for (let j = 1; j <= n; j++) {
+    const sz = j * u; acc += j * j;
+    s("rect", { x, y: yBot - sz, width: sz, height: sz, class: "f-acs s-ac", "stroke-width": 1.5 }, g);
+    if (u >= 6) for (let q = 1; q < j; q++) {
+      s("line", { x1: x + q * u, x2: x + q * u, y1: yBot - sz, y2: yBot, class: "s-ac", "stroke-width": .5, opacity: .45 }, g);
+      s("line", { x1: x, x2: x + sz, y1: yBot - q * u, y2: yBot - q * u, class: "s-ac", "stroke-width": .5, opacity: .45 }, g);
+    }
+    T(g, x + sz / 2, yBot + 20, `${j}²`, "mono mut", 13);
+    if (lv >= 1) T(g, x + sz / 2, yBot - sz - 8, String(j * j), "mono b ta " + nw(lv, 1, "fadein"), 15);
+    if (lv >= 2) T(g, x + sz / 2, yBot - sz - 28, `計 ${acc}`, "mono tw " + nw(lv, 2, "fadein"), 12);
+    x += sz + gap;
+  }
+  if (lv >= 3) badge(g, W / 2, 86, `n(n+1)(2n+1)/6 = ${n}·${n + 1}·${2 * n + 1}/6 = ${n * (n + 1) * (2 * n + 1) / 6}`, "f-ac", "tp", 16).classList.add("pop");
+}
+unit({
+  id: "u-sigma", cat: "seq", name: "Σ（シグマ）", sub: "和の記号と公式",
+  gen: `${SIG("n")} k = <span class="fr"><i>n(n + 1)</i><i>2</i></span>   ${SIG("n")} k<sup>2</sup> = <span class="fr"><i>n(n + 1)(2n + 1)</i><i>6</i></span>`,
+  viz: sigmaViz,
+  intro: {
+    title: "Σ は「たし算の まとめ書き」", hint: "形をえらんで n を動かそう",
+    lead: "Σ<sub>k=1</sub><sup>n</sup> は「<b>k に 1, 2, …, n を入れて 全部たす</b>」という記号。図の面積が 和。",
+    p: { type: "k", n: 6, ca: 2, cb: 1 },
+    controls: [
+      { seg: [["k", "Σ k（階段）"], ["k2", "Σ k²（正方形）"], ["lin", "Σ(2k + 1)"]], key: "type" },
+      { key: "n", label: "n", min: 1, max: 10 },
+    ],
+    eq: p => p.type === "k" ? `${SIG(p.n)} k = 1 + 2 + … + ${p.n} = <b class="cw">${p.n * (p.n + 1) / 2}</b>` : p.type === "k2" ? `${SIG(p.n)} k<sup>2</sup> = 1 + 4 + … + ${p.n * p.n} = <b class="cw">${p.n * (p.n + 1) * (2 * p.n + 1) / 6}</b>` : `${SIG(p.n)} (2k + 1) = 2${SIG(p.n)}k + ${SIG(p.n)}1 = <b class="cw">${p.n * (p.n + 1) + p.n}</b>`,
+    say: p => p.type === "k" ? "階段を 2 つ合わせると <b>n × (n + 1)</b> の長方形 → 半分。" : p.type === "k2" ? "1 辺 k の正方形の面積を 全部たす。" : "棒を <b>2k の部分</b> と <b>1 の部分</b> に分けて、別々に Σ。",
+  },
+  ex: {
+    title: "Σ k を求める", problem: `${SIG(10)} k を求めよ。`,
+    p: { type: "k", n: 10 },
+    steps: [
+      { say: "Σ k は 1 + 2 + … + 10。<b>階段の面積</b>。", eq: "1 + 2 + 3 + … + 10" },
+      { say: "逆さに重ねると、どの列も 1 + 10 = <b>11</b>。", eq: "どの列も 11" },
+      { say: "長方形 10 × 11 = 110。", eq: "2 × Σk = 10 × 11" },
+      { say: "半分で <b>55</b>。これが n(n + 1)/2。", eq: `${SIG(10)} k = <span class="fr"><i>10 × 11</i><i>2</i></span> = <b class="cw">55</b>` },
+    ],
+  },
+  pr: () => {
+    const a = ri(2, 3), b = ri(1, 3), n = ri(5, 9), ans = a * n * (n + 1) / 2 + b * n;
+    return {
+      title: "Σ(ak + b)", problem: `${SIG(n)} (${a}k + ${b}) は？`,
+      p: { type: "lin", n, ca: a, cb: b }, choices: numChoices(ans, [a * n * (n + 1) / 2 + b, a * n * (n + 1) + b * n, a * n * (n + 1) / 2]),
+      hint: [`${a}k の部分と ${b} の部分に 分けて考えよう`, `Σ${b} は ${b} を ${n} 回たす（${b} だけ ではない！）`],
+      steps: [
+        { say: `k = 1, 2, …, ${n} を入れた棒をならべる。`, eq: `${a + b} + ${2 * a + b} + … + ${a * n + b}` },
+        { say: `棒を <b class="ca">${a}k の部分</b> と <b class="cb">${b} の部分</b> に分ける。`, eq: `${SIG(n)}(${a}k + ${b}) = ${a}${SIG(n)}k + ${SIG(n)}${b}` },
+        { say: `${a} × ${n}·${n + 1}/2 = ${a * n * (n + 1) / 2}、${b} × ${n} = ${b * n}。`, eq: `= ${a * n * (n + 1) / 2} + ${b * n}` },
+        { say: "あわせて 答え。", eq: `= <b class="cw">${ans}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "Σ k²", problem: `${SIG(6)} k<sup>2</sup> は？`,
+    p: { type: "k2", n: 6 }, choices: ["91", "21", "441", "36"],
+    hint: ["k² は 1 辺 k の正方形の面積", "n(n + 1)(2n + 1)/6 に n = 6"],
+    steps: [
+      { say: "k<sup>2</sup> は <b>1 辺 k の正方形</b>。1, 4, 9, 16, 25, 36 をならべる。", eq: "1 + 4 + 9 + 16 + 25 + 36" },
+      { say: "面積を順にたしていくと…", eq: "1, 5, 14, 30, 55, 91" },
+      { say: "公式でも：6·7·13/6 = <b>91</b>。（(Σk)<sup>2</sup> = 441 とはちがう！）", eq: `${SIG(6)} k<sup>2</sup> = <span class="fr"><i>6·7·13</i><i>6</i></span> = <b class="cw">91</b>` },
+    ],
+  },
+  summary: [`${SIG("n")} k = n(n + 1)/2`, `${SIG("n")} k<sup>2</sup> = n(n + 1)(2n + 1)/6`, `${SIG("n")} c = <b>cn</b>（c を n 回たす）`, "Σ(ak + b) = aΣk + Σb と <b>分けて</b> 計算"],
+});
+
+/* --- 階差数列：となりの差の列 --- */
+function diffViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg), full = k >= 99, lv = full ? 9 : k;
+  const t = p.terms, N = t.length, known = p.known ?? N, tg = p.target;
+  const x0 = 40, x1 = W - 30, sp = (x1 - x0) / N, X = i => x0 + sp * (i + .5), R = Math.min(27, sp * .4);
+  const y1 = Math.max(110, H * .26), y2 = y1 + 92, y3 = y2 + 80;
+  const fs = v => clamp(Math.min(R * 1.6 / (String(v).length * .62), 18), 9, 18);
+  const b = range(0, N - 2).map(i => t[i + 1] - t[i]);
+  const shownT = i => full || i < known || (lv >= 2 && i !== tg - 1) || lv >= 3;
+  const shownB = i => full || (lv >= 1 && i < known - 1) || lv >= 2;
+  for (let i = 0; i < N - 1; i++) {
+    if (!shownB(i)) continue;
+    const bx = (X(i) + X(i + 1)) / 2, cls = (lv === 1 && i < known - 1) || (lv === 2 && i >= known - 1) ? "fadein" : "";
+    const gg = s("g", { class: cls }, g);
+    s("line", { x1: X(i), y1: y1 + R, x2: bx, y2: y2 - 16, class: "s-bl", "stroke-width": 1.4, opacity: .6 }, gg);
+    s("line", { x1: X(i + 1), y1: y1 + R, x2: bx, y2: y2 - 16, class: "s-bl", "stroke-width": 1.4, opacity: .6 }, gg);
+    const bw2 = Math.max(34, String(b[i]).length * 11 + 14);
+    s("rect", { x: bx - bw2 / 2, y: y2 - 16, width: bw2, height: 32, rx: 4, class: i >= known - 1 ? "f-gds s-gd" : "f-bls s-bl", "stroke-width": 1.5 }, gg);
+    T(gg, bx, y2 + 6, String(b[i]), "mono b tb", 16);
+    T(gg, bx, y2 + 32, "b" + subd(i + 1), "mono mut", 12);
+  }
+  if ((full && p.second) || (p.second && lv >= 1)) for (let i = 0; i < N - 2; i++) {
+    const cx = X(i + 1), c = b[i + 1] - b[i];
+    s("line", { x1: (X(i) + X(i + 1)) / 2, y1: y2 + 16, x2: cx, y2: y3 - 14, class: "s-gd", "stroke-width": 1.2, opacity: .6 }, g);
+    s("line", { x1: (X(i + 1) + X(i + 2)) / 2, y1: y2 + 16, x2: cx, y2: y3 - 14, class: "s-gd", "stroke-width": 1.2, opacity: .6 }, g);
+    s("rect", { x: cx - 20, y: y3 - 14, width: 40, height: 28, rx: 4, class: "f-gds s-gd", "stroke-width": 1.3 }, g);
+    T(g, cx, y3 + 6, String(c), "mono b tg", 15);
+  }
+  for (let i = 0; i < N; i++) {
+    const on = shownT(i), isT = i === tg - 1;
+    const gg = s("g", { class: (lv === 3 && isT) || (lv === 2 && i >= known && !isT) ? "pop" : "" }, g);
+    if (on) {
+      s("circle", { cx: X(i), cy: y1, r: R, class: isT && (lv >= 3 || full) ? "f-wms s-wm" : i >= known ? "f-gds s-gd" : "f-acs s-ac", "stroke-width": 2 }, gg);
+      T(gg, X(i), y1 + fs(t[i]) / 3, String(t[i]), "mono b", fs(t[i]));
+    } else {
+      s("circle", { cx: X(i), cy: y1, r: R, class: "thin dash" }, gg);
+      T(gg, X(i), y1 + 6, "?", "mut b", 18);
+    }
+    T(g, X(i), y1 - R - 10, "a" + subd(i + 1), "mono " + (isT ? "tw b" : "mut"), 13);
+  }
+  if (lv >= 1 && p.pattern) T(g, x1, y2 + 56 + (p.second ? 80 : 0), p.pattern, "b tb " + nw(lv, 1, "fadein"), 15, "end");
+  if (lv >= 2 && p.pattern2 && !full) T(g, x0, y2 + 56, p.pattern2, "b tg fadein", 14, "start");
+  if (lv >= 3 && !full) {
+    const yb = y2 + 72;
+    brace(g, X(0) + sp * .5 - 16, X(tg - 2) + sp * .5 + 16, yb, "", "wm");
+    T(g, (X(0) + X(tg - 1)) / 2, yb + 40, `a${subd(tg)} = a₁ + (b₁ + … + b${subd(tg - 1)}) = ${t[tg - 1]}`, "mono b tw pop", 16);
+  }
+}
+const DIFF_SETS = { sq: [1, 4, 9, 16, 25, 36, 49], tri: [1, 3, 6, 10, 15, 21, 28], pow: [1, 2, 4, 8, 16, 32, 64], cube: [1, 8, 27, 64, 125, 216] };
+unit({
+  id: "u-diff", cat: "seq", name: "階差数列", sub: "となりの差を ならべる",
+  gen: `a<sub>n</sub> = a<sub>1</sub> + ${SIG("n−1")} <span class="cb">b<sub>k</sub></span>  （n ≧ 2）`,
+  viz: diffViz,
+  intro: {
+    title: "差をとると 見えてくる", hint: "数列をえらんで、差の列を見よう",
+    lead: "規則が見えない数列も、<b>となりの差</b>（階差数列 b<sub>n</sub>）をとると 等差・等比になることが多い。",
+    p: { set: "sq", terms: DIFF_SETS.sq, second: true },
+    controls: [
+      { seg: [["sq", "平方数"], ["tri", "三角数"], ["pow", "2 のべき"], ["cube", "立方数"]], key: "set", on: p => { p.terms = DIFF_SETS[p.set]; } },
+      { seg: [[false, "差 1 段"], [true, "差 2 段"]], key: "second" },
+    ],
+    say: p => ({ sq: "差は 3, 5, 7, … の <b>等差数列</b>（さらに差をとると 2 で一定）。", tri: "差は 2, 3, 4, … の <b>等差数列</b>。", pow: "差は 1, 2, 4, … で <b>もとの数列と同じ</b>！", cube: "差の差は 12, 18, 24, … まだ等差。3 段目で一定になる。" })[p.set],
+    points: ["a<sub>n</sub> は a<sub>1</sub> に 差を <b>n − 1 個</b> たしたもの", "最後に <b>n = 1 でも成り立つか</b> たしかめる"],
+  },
+  ex: {
+    title: "一般項を求める", problem: "数列 1, 2, 5, 10, 17, … の一般項 a<sub>n</sub> を求めよ。",
+    p: { terms: [1, 2, 5, 10, 17, 26], known: 5, target: 6, pattern: "1, 3, 5, 7 → 奇数（等差）", pattern2: "差をのばすと 9" },
+    steps: [
+      { say: "数列 1, 2, 5, 10, 17, …。このままでは 規則が見えない。", eq: "1, 2, 5, 10, 17, …" },
+      { say: "となりの差 b<sub>n</sub>：1, 3, 5, 7 → <b>奇数の等差数列</b>。b<sub>k</sub> = 2k − 1", eq: "b<sub>k</sub> = 2k − 1" },
+      { say: "a<sub>n</sub> は a<sub>1</sub> に 差を <b>n − 1 個</b> たしたもの。", eq: `a<sub>n</sub> = 1 + ${SIG("n−1")}(2k − 1)` },
+      { say: `Σ(2k − 1) = (n − 1)<sup>2</sup> なので <b>a<sub>n</sub> = n<sup>2</sup> − 2n + 2</b>（n = 1 でも 1 になり OK）。a<sub>6</sub> = 26 でたしかめ。`, eq: `a<sub>n</sub> = <b class="cw">n<sup>2</sup> − 2n + 2</b>` },
+    ],
+  },
+  pr: () => {
+    const a1 = ri(1, 5), b1 = ri(1, 3), c = ri(1, 3), terms = [a1];
+    for (let i = 1; i < 8; i++) terms.push(terms[i - 1] + b1 + (i - 1) * c);
+    const ans = terms[7], b9 = b1 + 7 * c;
+    return {
+      title: "第 8 項を求める", problem: `数列 ${terms.slice(0, 5).join(", ")}, … の <b>第 8 項</b> は？`,
+      p: { terms, known: 5, target: 8, pattern: `${range(0, 3).map(i => b1 + i * c).join(", ")} → ${c} ずつ増える`, pattern2: "差を a₈ まで のばす" },
+      choices: numChoices(ans, [ans + b9, terms[6], ans - a1]),
+      hint: ["となりの差を書き出してみよう", `差は ${c} ずつ増える。a₈ まで のばそう`],
+      steps: [
+        { say: `数列 ${terms.slice(0, 5).join(", ")}, …`, eq: terms.slice(0, 5).join(", ") + ", …" },
+        { say: `差 b<sub>n</sub>：${range(0, 3).map(i => b1 + i * c).join(", ")} → <b>${c} ずつ増える</b>。`, eq: `b<sub>k</sub> = ${b1} + (k − 1)·${c}` },
+        { say: `差を のばす：${range(4, 6).map(i => b1 + i * c).join(", ")}。それをたして a<sub>6</sub>, a<sub>7</sub>, a<sub>8</sub>。`, eq: `a<sub>6</sub> = ${terms[5]},  a<sub>7</sub> = ${terms[6]}` },
+        { say: `a<sub>8</sub> = a<sub>1</sub> + (b<sub>1</sub> + … + b<sub>7</sub>)。`, eq: `a<sub>8</sub> = ${a1} + ${ans - a1} = <b class="cw">${ans}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "差が等比数列", problem: "数列 2, 3, 5, 9, 17, … の一般項 a<sub>n</sub> は？",
+    p: { terms: [2, 3, 5, 9, 17, 33], known: 5, target: 6, pattern: "1, 2, 4, 8 → ×2（等比）", pattern2: "差をのばすと 16" },
+    choices: ["a<sub>n</sub> = 2<sup>n−1</sup> + 1", "a<sub>n</sub> = 2<sup>n</sup> + 1", "a<sub>n</sub> = 2<sup>n−1</sup>", "a<sub>n</sub> = n<sup>2</sup> − n + 2"],
+    hint: ["差は 1, 2, 4, 8 … 何数列？", "a<sub>n</sub> = 2 + (1 + 2 + … + 2<sup>n−2</sup>)"],
+    steps: [
+      { say: "数列 2, 3, 5, 9, 17, …", eq: "2, 3, 5, 9, 17, …" },
+      { say: "差：1, 2, 4, 8 → <b>×2 の等比数列</b>。b<sub>k</sub> = 2<sup>k−1</sup>", eq: "b<sub>k</sub> = 2<sup>k−1</sup>" },
+      { say: "a<sub>n</sub> = a<sub>1</sub> + (差を n − 1 個)。", eq: `a<sub>n</sub> = 2 + ${SIG("n−1")} 2<sup>k−1</sup> = 2 + (2<sup>n−1</sup> − 1)` },
+      { say: "<b>a<sub>n</sub> = 2<sup>n−1</sup> + 1</b>（n = 1 でも 2 で OK）。a<sub>6</sub> = 33 でたしかめ。", eq: `a<sub>n</sub> = <b class="cw">2<sup>n−1</sup> + 1</b>` },
+    ],
+  },
+  summary: ["差の列 b<sub>n</sub> = a<sub>n+1</sub> − a<sub>n</sub> を書き出す", `a<sub>n</sub> = a<sub>1</sub> + ${SIG("n−1")} b<sub>k</sub>（Σ の上は <b>n − 1</b>）`, "n ≧ 2 で求めたので、<b>n = 1 のときも</b> たしかめる"],
+});
+
+/* --- 漸化式：クモの巣図と α からのきょり --- */
+function recViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg), lv = k >= 99 ? 9 : p.kmap ? p.kmap[Math.max(k, 0)] : Math.max(k, 0);
+  const N = p.N, t = [p.a1];
+  for (let i = 1; i < N; i++) t.push(p.pp * t[i - 1] + p.q);
+  const hasA = Math.abs(1 - p.pp) > 1e-9, al = hasA ? p.q / (1 - p.pp) : null;
+  const wide = W >= 740, yTop = 96, yBot = H - 70;
+  const bx0 = wide ? W * .52 : 60, bx1 = W - 30;
+  const lo = Math.min(0, ...t, al ?? 0), hi = Math.max(0, ...t, al ?? 0);
+  const B = bars(g, { vals: t, x0: bx0, x1: bx1, yTop, yBot, lo, hi, bwMax: 46, lab: i => "a" + subd(i + 1), val: i => fmt(t[i], 3), cls: () => "f-acs s-ac", pop: i => lv === 0 && k >= 0 ? "" : "" });
+  if (hasA && lv >= 1) {
+    s("line", { x1: bx0 - 10, x2: bx1 + 6, y1: B.Y(al), y2: B.Y(al), class: "s-wm dash " + nw(lv, 1, "fadein"), "stroke-width": 2 }, g);
+    badge(g, bx0 - 6, B.Y(al) - 8, `α = ${fmt(al, 3)}`, "f-wm", "tp", 13, "end");
+  }
+  if (hasA && lv >= 2) {
+    for (let i = 0; i < N; i++) {
+      const x = B.X(i) + B.bw / 2 + 5;
+      if (Math.abs(B.Y(t[i]) - B.Y(al)) < 4) continue;
+      arrow(g, x, B.Y(al), x, B.Y(t[i]), "wm", 2.2, nw(lv, 2, "fadein"));
+    }
+    T(g, (bx0 + bx1) / 2, yTop - 40, `α からのきょり：${t.slice(0, 5).map(v => fmt(v - al, 3)).join(" → ")} …（×${fmt(p.pp, 3)}）`, "mono b tw " + nw(lv, 2, "fadein"), 14);
+  }
+  if (!wide) return;
+  /* クモの巣図 */
+  const cx0 = 64, size = Math.min(W * .44 - 70, yBot - yTop + 20), cy1 = (yTop + yBot) / 2 + size / 2;
+  let vlo = Math.min(...t, al ?? t[0]), vhi = Math.max(...t, al ?? t[0]);
+  const pad = (vhi - vlo) * .15 + 1; vlo -= pad; vhi += pad;
+  const M = v => (v - vlo) / (vhi - vlo) * size, PX = v => cx0 + M(v), PY = v => cy1 - M(v);
+  const gc = s("g", {}, g);
+  s("rect", { x: cx0, y: cy1 - size, width: size, height: size, class: "f-pn s-ln", "stroke-width": 1 }, gc);
+  if (vlo < 0 && vhi > 0) { s("line", { x1: PX(0), x2: PX(0), y1: cy1, y2: cy1 - size, class: "thin" }, gc); s("line", { x1: cx0, x2: cx0 + size, y1: PY(0), y2: PY(0), class: "thin" }, gc); }
+  s("line", { x1: PX(vlo), y1: PY(vlo), x2: PX(vhi), y2: PY(vhi), class: "thin dash" }, gc);
+  T(gc, PX(vhi) - 4, PY(vhi) + 16, "y = x", "mut", 12, "end");
+  const fy = x => p.pp * x + p.q;
+  const xs = [vlo, vhi];
+  s("line", { x1: PX(xs[0]), y1: PY(fy(xs[0])), x2: PX(xs[1]), y2: PY(fy(xs[1])), class: "s-ac", "stroke-width": 2.2, "clip-path": "url(#cw)" }, gc);
+  const cp = s("clipPath", { id: "cw" }, svg.querySelector("defs"));
+  s("rect", { x: cx0, y: cy1 - size, width: size, height: size }, cp);
+  T(gc, cx0 + 6, cy1 - size + 18, `y = ${fmt(p.pp, 3)}x ${p.q < 0 ? "−" : "+"} ${fmt(Math.abs(p.q), 3)}`, "mono b ta", 13, "start");
+  let d = `M${PX(t[0])} ${PY(vlo)}`;
+  for (let i = 0; i < N - 1; i++) d += `L${PX(t[i])} ${PY(t[i + 1])}L${PX(t[i + 1])} ${PY(t[i + 1])}`;
+  s("path", { d, class: "f-none s-wm draw", "stroke-width": 1.8, "clip-path": "url(#cw)" }, gc);
+  if (hasA && lv >= 1) { s("circle", { cx: PX(al), cy: PY(al), r: 6, class: "f-wm" }, gc); s("circle", { cx: PX(al), cy: PY(al), r: 6, class: "f-wm halo" }, gc); }
+  T(gc, cx0 + size / 2, cy1 + 22, "クモの巣図（交点が α）", "mut", 13);
+}
+const recEq = (c, p, al) => `${c === 1 ? "" : c + "·"}${p}<sup>n−1</sup> ${al < 0 ? "−" : "+"} ${Math.abs(al)}`;
+unit({
+  id: "u-rec", cat: "seq", name: "漸化式", sub: "となりどうしの関係",
+  gen: `a<sub>n+1</sub> = <span class="ca">p</span>a<sub>n</sub> + q  →  a<sub>n+1</sub> − <span class="cw">α</span> = <span class="ca">p</span>(a<sub>n</sub> − <span class="cw">α</span>)`,
+  viz: recViz,
+  intro: {
+    title: "α（つりあう数）をさがす", hint: "p・q・a₁ を動かして 線の動きを見よう",
+    lead: "a<sub>n+1</sub> = pa<sub>n</sub> + q は、<b>α = pα + q</b> の数 α からの きょりが <b>p 倍ずつ</b> かわる。",
+    p: { a1: 1, pp: 2, q: 1, N: 7 },
+    controls: [
+      { key: "pp", label: "p", min: -1.5, max: 2.5, step: .25 },
+      { key: "q", label: "q", min: -3, max: 3 },
+      { key: "a1", label: "a<sub>1</sub>", min: -3, max: 6 },
+    ],
+    eq: p => Math.abs(1 - p.pp) < 1e-9 ? `p = 1 → 等差数列（公差 ${p.q}）` : `α = ${fmt(p.pp, 3)}α ${p.q < 0 ? "−" : "+"} ${Math.abs(p.q)}  →  α = <b class="cw">${fmt(p.q / (1 - p.pp), 3)}</b>`,
+    say: p => Math.abs(1 - p.pp) < 1e-9 ? "p = 1 だと α はない（ただの等差数列）。" : Math.abs(p.pp) < 1 ? "|p| &lt; 1：きょりが縮んで <b>α に近づく</b>。" : "|p| &gt; 1：きょりが のびて <b>α から はなれる</b>。",
+    points: ["グラフでは α は 2 本の直線の <b>交点</b>", "a<sub>n</sub> − α は 公比 p の <b>等比数列</b>"],
+  },
+  ex: {
+    title: "一般項を求める", problem: "a<sub>1</sub> = 1、a<sub>n+1</sub> = 2a<sub>n</sub> + 1 で定まる数列の一般項は？",
+    p: { a1: 1, pp: 2, q: 1, N: 6 },
+    steps: [
+      { say: "a<sub>1</sub> = 1 から 次々に計算：1, 3, 7, 15, 31, …", eq: "1 → 3 → 7 → 15 → 31 → …" },
+      { say: "α = 2α + 1 を解くと <b>α = −1</b>（クモの巣図の 2 本の直線の交点）。", eq: "α = 2α + 1  →  α = −1" },
+      { say: "α からのきょり a<sub>n</sub> + 1 は 2, 4, 8, 16 … <b>×2 の等比数列</b>！", eq: "a<sub>n+1</sub> + 1 = 2(a<sub>n</sub> + 1)" },
+      { say: "a<sub>n</sub> + 1 = 2·2<sup>n−1</sup> = 2<sup>n</sup> より <b>a<sub>n</sub> = 2<sup>n</sup> − 1</b>。", eq: `a<sub>n</sub> = <b class="cw">2<sup>n</sup> − 1</b>` },
+    ],
+  },
+  pr: () => {
+    const pp = ri(2, 3), al = pick([-3, -2, -1, 1, 2, 3]), c = ri(1, 3), q = al * (1 - pp), a1 = al + c;
+    return {
+      title: "一般項を求める", problem: `a<sub>1</sub> = ${a1}、a<sub>n+1</sub> = ${pp}a<sub>n</sub> ${q < 0 ? "−" : "+"} ${Math.abs(q)} で定まる数列の一般項は？`,
+      p: { a1, pp, q, N: 5 },
+      choices: [`a<sub>n</sub> = ${recEq(c, pp, al)}`, `a<sub>n</sub> = ${recEq(c, pp, -al)}`, `a<sub>n</sub> = ${recEq(a1, pp, al)}`, `a<sub>n</sub> = ${c === 1 ? "" : c + "·"}${pp}<sup>n</sup> ${al < 0 ? "−" : "+"} ${Math.abs(al)}`],
+      hint: [`α = ${pp}α ${q < 0 ? "−" : "+"} ${Math.abs(q)} を解こう`, `a<sub>n</sub> − α は 初項 a<sub>1</sub> − α、公比 ${pp}`],
+      steps: [
+        { say: `計算してみる：${(() => { const t = [a1]; for (let i = 1; i < 4; i++) t.push(pp * t[i - 1] + q); return t.join(", "); })()}, …`, eq: "まずは 数を出してみる" },
+        { say: `α = ${pp}α ${q < 0 ? "−" : "+"} ${Math.abs(q)} → <b>α = ${al}</b>`, eq: `α = ${al}` },
+        { say: `α からのきょり：初項 ${a1} − (${al}) = ${c}、×${pp} ずつ。`, eq: `a<sub>n</sub> − (${al}) = ${c}·${pp}<sup>n−1</sup>` },
+        { say: "α をもどして 一般項。", eq: `a<sub>n</sub> = <b class="cw">${recEq(c, pp, al)}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "どこに近づく？", problem: "a<sub>1</sub> = 4、a<sub>n+1</sub> = <span class=\"fr\"><i>1</i><i>2</i></span>a<sub>n</sub> + 1。n を大きくすると a<sub>n</sub> は？",
+    p: { a1: 4, pp: .5, q: 1, N: 8 }, txt: true,
+    choices: ["2 に近づく", "0 に近づく", "1 に近づく", "どんどん大きくなる"],
+    hint: ["α = α/2 + 1 を解いてみよう", "α からのきょりが ×1/2 ずつ…"],
+    steps: [
+      { say: "計算すると 4, 3, 2.5, 2.25, 2.125, … 少しずつ <b>何かに近づく</b>。", eq: "4 → 3 → 2.5 → 2.25 → 2.125 → …" },
+      { say: "α = ½α + 1 → <b>α = 2</b>（直線の交点）。", eq: "α = ½α + 1  →  α = 2" },
+      { say: "α からのきょり 2, 1, ½, ¼ … ×½ で <b>0 に近づく</b>。", eq: "a<sub>n</sub> − 2 = 2·(½)<sup>n−1</sup>" },
+      { say: "a<sub>n</sub> = 2·(½)<sup>n−1</sup> + 2 → <b>2 に近づく</b>（クモの巣が 交点に すいこまれる）。", eq: `a<sub>n</sub> → <b class="cw">2</b>` },
+    ],
+  },
+  summary: ["α = pα + q を解いて α を出す（グラフの交点）", "a<sub>n+1</sub> − α = p(a<sub>n</sub> − α) → <b>a<sub>n</sub> − α は等比数列</b>", "|p| &lt; 1 なら α に近づく"],
+});
+
+/* --- 数学的帰納法：ドミノ --- */
+function domViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg);
+  const intro = k >= 99, lv = intro ? 0 : p.kmap ? p.kmap[Math.max(k, 0)] : Math.max(k, 0);
+  const N = 9, chain = intro ? p.chain : true, base = intro ? p.base : !(p.mode === "nobase" && lv < 2);
+  const dh = Math.min(140, H * .36), dw = dh * .14, sp = chain ? dh * .56 : dh * 1.15;
+  const total = (N - 1) * sp + dw, x0 = Math.max(30, (W - total) / 2 - dh * .3), yb = H * .66;
+  let F = 0, anim = false;
+  if (intro) { if (p.go) { F = base ? (chain ? N : 1) : 0; anim = true; } }
+  else if (p.mode === "nobase") { F = lv >= 2 ? N : 0; anim = lv === 2; }
+  else { F = lv >= 4 ? N : lv >= 1 ? 1 : 0; anim = lv === 1 || lv === 4; }
+  const lean = Math.asin(clamp((sp - dw) / dh, 0, 1)) * 180 / Math.PI;
+  s("line", { x1: 20, x2: W - 20, y1: yb, y2: yb, class: "ink" }, g);
+  const KI = 4;
+  for (let i = 0; i < N; i++) {
+    const x = x0 + i * sp, fell = i < F;
+    const ang = !fell ? 0 : i === N - 1 || !chain ? 90 : lean;
+    const hl = !intro && lv >= 2 && lv < 4 && p.mode !== "nobase" && (i === KI || i === KI + 1);
+    const r = s("rect", { x, y: yb - dh, width: dw, height: dh, rx: 2, class: (i === 0 && lv >= 1 && !intro ? "f-wm s-ink" : hl ? (i === KI ? "f-bl s-ink" : "f-ac s-ink") : "f-pn s-ink"), "stroke-width": 2 }, g);
+    r.classList.add("domino");
+    if (fell) {
+      const delay = anim ? (p.mode === "nobase" || lv === 4 || intro ? i * .2 : 0) : 0;
+      if (anim) r.style.cssText = `--ang:${ang}deg;animation:fallA .38s ${delay}s cubic-bezier(.5,0,.9,.6) forwards`;
+      else r.style.transform = `rotate(${ang}deg)`;
+    }
+    const lab = !intro && lv >= 2 && p.mode !== "nobase" ? (i === KI ? "k" : i === KI + 1 ? "k+1" : i < 3 ? String(i + 1) : i === 3 ? "…" : i === N - 1 ? "…" : "") : String(i + 1);
+    T(g, x + dw / 2, yb + 24, lab, "mono b " + (hl ? "tw" : "mut"), 15);
+  }
+  if (!intro) {
+    if (lv >= 1 && p.mode !== "nobase") badge(g, x0 + dw / 2, yb - dh - 22, "① n = 1", "f-wm", "tp", 15);
+    if ((lv >= 3 && lv < 4) || (p.mode === "nobase" && lv <= 1)) {
+      const xa = x0 + KI * sp + dw, xb = x0 + (KI + 1) * sp;
+      arc(g, xa - dw / 2, yb - dh - 8, xb + dw / 2, yb - dh - 8, "ac", -34, "fadein");
+      badge(g, (xa + xb) / 2, yb - dh - 52, "② k → k+1", "f-ac", "tp", 15);
+    }
+    if (p.mode === "nobase" && lv === 1) T(g, x0 + dw / 2, yb - dh - 24, "1 枚目は？", "b tw pop", 16);
+    if (lv >= 4 || (p.mode === "nobase" && lv >= 2)) T(g, W / 2, yb + 62, "全部倒れる ＝ すべての n で成り立つ", "b ta fadein", 18);
+  } else {
+    T(g, W / 2, yb + 62, !p.go ? "▶ 倒してみよう" : !base ? "1 枚目を倒さないと 何も起きない" : !chain ? "となりに伝わらないと 1 枚目だけ" : "全部倒れた！", "b " + (p.go && base && chain ? "ta" : "tw"), 18);
+  }
+}
+unit({
+  id: "u-induct", cat: "seq", name: "数学的帰納法", sub: "ドミノたおしの証明",
+  gen: `<span class="cw">① n = 1 で成り立つ</span> ＋ <span class="ca">② n = k ⇒ n = k + 1</span> → すべての n`,
+  viz: domViz,
+  intro: {
+    title: "ドミノで考える", hint: "①②を切りかえて「倒す」をおそう",
+    lead: "すべての n で成り立つことを、<b>① 最初の 1 枚が倒れる</b> ＋ <b>② k 枚目が倒れれば k+1 枚目も倒れる</b> で示す。",
+    p: { base: true, chain: true, go: 0 },
+    controls: [
+      { seg: [[true, "① あり"], [false, "① なし"]], key: "base", on: p => { p.go = 0; } },
+      { seg: [[true, "② あり"], [false, "② なし"]], key: "chain", on: p => { p.go = 0; } },
+      { btn: [["▶ 倒す", p => { p.go++; }], ["↺ 立てる", p => { p.go = 0; }]] },
+    ],
+    say: p => p.base && p.chain ? "①と②が <b>両方</b> そろうと 全部倒れる。" : "どちらか 1 つでも かけると、全部は倒れない。",
+  },
+  ex: {
+    title: "1 + 2 + … + n の公式", problem: "すべての自然数 n で 1 + 2 + … + n = <span class=\"fr\"><i>n(n + 1)</i><i>2</i></span> を証明せよ。",
+    p: {},
+    steps: [
+      { say: "証明は 2 つの部品：<b>① 最初のドミノ</b> と <b>② となりに伝わるしくみ</b>。", eq: "① n = 1 ／ ② n = k ⇒ n = k + 1" },
+      { say: "① n = 1：左辺 = 1、右辺 = 1·2/2 = 1。<b>成り立つ</b>（1 枚目が倒れる）。", eq: "左辺 = 1,  右辺 = 1·2 ÷ 2 = 1" },
+      { say: "② n = k で成り立つと <b>仮定</b> する（k 枚目が倒れたとする）。", eq: "1 + 2 + … + k = k(k + 1) ÷ 2" },
+      { say: "両辺に (k + 1) をたす：右辺 = k(k+1)/2 + (k+1) = <b>(k+1)(k+2)/2</b>。n = k + 1 の式になった！", eq: "1 + … + k + (k + 1) = (k + 1)(k + 2) ÷ 2" },
+      { say: "①と②で ドミノは全部倒れる → <b>すべての n で成り立つ</b>。", eq: `<b class="ca">すべての自然数 n で成り立つ ∎</b>` },
+    ],
+  },
+  pr: () => {
+    const Q = pick([
+      { f: "1 + 3 + 5 + … + (2n − 1) = n<sup>2</sup>", hyp: "1 + 3 + … + (2k − 1) = k<sup>2</sup>", next: "2k + 1", c: ["k<sup>2</sup> + (2k + 1)", "k<sup>2</sup> + (2k − 1)", "k<sup>2</sup> + 2k", "(k + 1)<sup>2</sup> + (2k + 1)"], res: "k<sup>2</sup> + 2k + 1 = (k + 1)<sup>2</sup>" },
+      { f: "1 + 2 + 4 + … + 2<sup>n−1</sup> = 2<sup>n</sup> − 1", hyp: "1 + 2 + … + 2<sup>k−1</sup> = 2<sup>k</sup> − 1", next: "2<sup>k</sup>", c: ["(2<sup>k</sup> − 1) + 2<sup>k</sup>", "(2<sup>k</sup> − 1) + 2<sup>k+1</sup>", "(2<sup>k</sup> − 1) + 2<sup>k−1</sup>", "2<sup>k</sup> + 2<sup>k</sup>"], res: "2·2<sup>k</sup> − 1 = 2<sup>k+1</sup> − 1" },
+      { f: "1<sup>2</sup> + 2<sup>2</sup> + … + n<sup>2</sup> = n(n+1)(2n+1)/6", hyp: "1<sup>2</sup> + … + k<sup>2</sup> = k(k+1)(2k+1)/6", next: "(k + 1)<sup>2</sup>", c: ["k(k+1)(2k+1)/6 + (k + 1)<sup>2</sup>", "k(k+1)(2k+1)/6 + k<sup>2</sup>", "k(k+1)(2k+1)/6 + (k + 1)", "(k+1)(k+2)(2k+3)/6 + (k + 1)<sup>2</sup>"], res: "(k+1)(k+2)(2k+3)/6" },
+    ]);
+    return {
+      title: "n = k + 1 の左辺", problem: `${Q.f} を帰納法で証明する。n = k で成り立つと仮定したとき、<b>n = k + 1 の左辺</b> は どう書ける？`,
+      p: { kmap: [2, 3, 3, 4] }, choices: Q.c, txt: true,
+      hint: ["n = k + 1 の左辺 = n = k の左辺 ＋ 次の 1 項", `次の 1 項は ${Q.next}`],
+      steps: [
+        { say: `仮定（k 枚目が倒れた）：${Q.hyp}`, eq: Q.hyp },
+        { say: `n = k + 1 の左辺 = n = k の左辺 ＋ <b>次の項 ${Q.next}</b>。`, eq: `左辺 = (n = k の左辺) + ${Q.next}` },
+        { say: "仮定を使って n = k の左辺を おきかえる。", eq: `= ${Q.c[0]}` },
+        { say: `整理すると ${Q.res}。<b>n = k + 1 の右辺</b> と同じ → ②OK。`, eq: `= <b class="cw">${Q.res}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "足りないものは？", problem: "ある証明：「n = k で成り立つと仮定すると n = k + 1 でも成り立つ。よって すべての n で成り立つ。」この証明に <b>足りない</b> のは？",
+    p: { mode: "nobase" }, txt: true,
+    choices: ["n = 1 で成り立つことの確認（①）", "n = k + 1 で成り立つという仮定", "n = 0 での計算", "何も足りない"],
+    hint: ["ドミノで考えると？", "②だけでは、最初の 1 枚が倒れるとは かぎらない"],
+    steps: [
+      { say: "②（となりに伝わる しくみ）は ある。", eq: "② n = k ⇒ n = k + 1 は OK" },
+      { say: "でも <b>1 枚目を倒していない</b> と、どれも倒れない。", eq: "① が ない！" },
+      { say: "<b>①（n = 1 の確認）</b> を入れると 全部倒れる。", eq: `<b class="cw">① n = 1 の確認が必要</b>` },
+    ],
+  },
+  summary: ["① n = 1 で成り立つことを たしかめる", "② n = k で成り立つと <b>仮定</b> して、n = k + 1 でも成り立つことを示す", "n = k + 1 の左辺 = n = k の左辺 ＋ <b>次の 1 項</b>"],
+});
+</script>
+<script>
+"use strict";
+/* ===================== 統計的な推測 ===================== */
+
+/* やじろべえの支点（期待値）。apex = 軸の上の点 */
+function fulcrum(g, x, y, label, cls = "", side = false) {
+  const gg = s("g", { class: cls }, g);
+  s("polygon", { points: `${x},${y + 2} ${x - 15},${y + 30} ${x + 15},${y + 30}`, class: "f-gd s-ink", "stroke-width": 1.5 }, gg);
+  if (label && side) T(gg, x + 22, y + 26, label, "mono b tg", 15, "start");
+  else if (label) badge(gg, x, y + 54, label, "f-gd", "tp", 14);
+  return gg;
+}
+/* σ のはば（両矢印） */
+function sdBand(g, xa, xb, y, label, cls = "", up = false) {
+  const gg = s("g", { class: cls }, g);
+  s("line", { x1: xa, x2: xb, y1: y, y2: y, class: "s-vi", "stroke-width": 2.2, "marker-end": "url(#ah-ink)", "marker-start": "url(#ah-ink)" }, gg);
+  T(gg, (xa + xb) / 2, up ? y - 8 : y + 20, label, "mono b tv", 14);
+  return gg;
+}
+function distStats(xs, ws) {
+  const D = sum(ws), E = sum(xs.map((x, i) => x * ws[i])) / D, E2 = sum(xs.map((x, i) => x * x * ws[i])) / D;
+  return { D, E, V: E2 - E * E, sd: Math.sqrt(Math.max(0, E2 - E * E)) };
+}
+
+/* --- 確率分布：棒グラフをやじろべえに --- */
+function distViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg), full = k >= 99, lv = full ? 9 : Math.max(k, 0);
+  if (p.mode === "lin") return linDist(g, p, lv, box);
+  const { xs, ws } = p, st = distStats(xs, ws), D = st.D;
+  const xmin = Math.min(...xs) - .8, xmax = Math.max(...xs) + .8, x0 = 60, x1 = W - 50;
+  const X = x => x0 + (x - xmin) / (xmax - xmin) * (x1 - x0);
+  const yBot = H - 120, yTop = 120, mw = p.maxW || Math.max(...ws), Y = w => yBot - w / mw * (yBot - yTop);
+  const bw = Math.min(64, (x1 - x0) / (xmax - xmin) * .62);
+  s("line", { x1: x0 - 10, x2: x1 + 10, y1: yBot, y2: yBot, class: "ink", "stroke-width": lv >= 2 ? 4 : 2 }, g);
+  xs.forEach((x, i) => {
+    const r = s("rect", { x: X(x) - bw / 2, y: Y(ws[i]), width: bw, height: Math.max(yBot - Y(ws[i]), 1), class: "f-bls s-bl" + (box.intro ? " drag" : ""), "stroke-width": 1.6 }, g);
+    T(g, X(x), yBot + 22, String(x), "mono b", 16);
+    if (ws[i] > 0 || box.intro) T(g, X(x), Y(ws[i]) - 8, frs(ws[i], D), "mono b tb", 14);
+    if (lv >= 1 && !box.intro) T(g, X(x), Y(ws[i]) - 28, `${x}×${frs(ws[i], D)}`, "mono tg " + nw(lv, 1, "fadein"), 13);
+    if (box.intro) {
+      s("rect", { x: X(x) - bw / 2 - 6, y: yTop - 30, width: bw + 12, height: yBot - yTop + 30, class: "drag", fill: "transparent" }, g).addEventListener("pointerdown", e => {
+        e.preventDefault();
+        const mv = ev => { const svgEl = document.querySelector("#stage svg"); if (!svgEl) return; const q = svgPt(svgEl, ev); p.ws[i] = clamp(Math.round((yBot - q.y) / (yBot - yTop) * mw), 0, mw); if (sum(p.ws) === 0) p.ws[i] = 1; box.redraw(); };
+        mv(e);
+        const up = () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); };
+        window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
+      });
+      void r;
+    }
+  });
+  T(g, x1 + 6, yBot + 22, "X", "disp", 18, "start");
+  if (lv >= 2) fulcrum(g, X(st.E), yBot, `E(X) = ${p.Elab || fmt(st.E, 2)}`, nw(lv, 2, "pop"));
+  if (lv >= 3) sdBand(g, X(st.E - st.sd), X(st.E + st.sd), yBot + 82, `σ ≈ ${fmt(st.sd, 2)}（V = ${p.Vlab || fmt(st.V, 2)}）`, nw(lv, 3, "fadein"));
+}
+function linDist(g, p, lv, { W, H }) {
+  const xs = range(1, 6), x0 = 50, x1 = W - 40, X = v => x0 + v / 14 * (x1 - x0);
+  const rowH = (H - 210) / 2, yA = 96 + rowH, yB = yA + rowH + 44, bh = rowH * .6, bw = Math.min(40, (x1 - x0) / 14 * .7);
+  const axis = (y, lab) => { s("line", { x1: x0, x2: x1, y1: y, y2: y, class: "ink", "stroke-width": 2 }, g); for (let v = 0; v <= 14; v++) s("line", { x1: X(v), x2: X(v), y1: y, y2: y + 5, class: "thin" }, g); T(g, x0 - 8, y + 5, lab, "disp", 18, "end"); };
+  axis(yA, "X"); xs.forEach(x => { s("rect", { x: X(x) - bw / 2, y: yA - bh, width: bw, height: bh, class: "f-bls s-bl", "stroke-width": 1.5 }, g); T(g, X(x), yA + 22, String(x), "mono", 14); });
+  fulcrum(g, X(3.5), yA, "E = 7/2", "", true);
+  sdBand(g, X(3.5 - 1.708), X(3.5 + 1.708), yA - bh - 14, "σ ≈ 1.71", "", true);
+  if (lv >= 1) {
+    axis(yB, "Y");
+    xs.forEach(x => {
+      const y = 2 * x + 1;
+      s("line", { x1: X(x), y1: yA + 28, x2: X(y), y2: yB - bh - 4, class: "thin dash fadein" }, g);
+      s("rect", { x: X(y) - bw / 2, y: yB - bh, width: bw, height: bh, class: "f-acs s-ac " + nw(lv, 1, "pop"), "stroke-width": 1.5 }, g);
+      T(g, X(y), yB + 22, String(y), "mono", 14);
+    });
+    T(g, x1, yA + 56, "Y = 2X + 1（横に 2 倍して 1 ずらす）", "b ta", 14, "end");
+  }
+  if (lv >= 2) fulcrum(g, X(8), yB, "E = 8", nw(lv, 2, "pop"), true);
+  if (lv >= 3) sdBand(g, X(8 - 3.416), X(8 + 3.416), yB - bh - 14, "σ は 2 倍 → V は 4 倍", "fadein", true);
+}
+const DIST_PRESETS = { die: [range(1, 6), [3, 3, 3, 3, 3, 3]], coin3: [[0, 1, 2, 3], [1, 3, 3, 1]], skew: [[1, 2, 3, 4, 5], [6, 3, 2, 1, 1]] };
+unit({
+  id: "u-dist", cat: "stat", name: "確率分布と期待値", sub: "つりあう点が 平均",
+  gen: `E(X) = <span class="sg">Σ</span> x<sub>k</sub>p<sub>k</sub>   V(X) = E(X<sup>2</sup>) − {E(X)}<sup>2</sup>`,
+  viz: distViz,
+  intro: {
+    title: "期待値 ＝ つりあう点", hint: "棒を上下にドラッグして 確率をかえよう",
+    lead: "確率の棒グラフを <b>やじろべえ</b> にすると、<b>つりあう点が 期待値 E(X)</b>。ばらつきの大きさが σ。",
+    p: { set: "die", xs: range(1, 6), ws: [3, 3, 3, 3, 3, 3], maxW: 6 },
+    controls: [{ seg: [["die", "サイコロ"], ["coin3", "コイン 3 枚"], ["skew", "かたよった"]], key: "set", on: p => { p.xs = DIST_PRESETS[p.set][0].slice(); p.ws = DIST_PRESETS[p.set][1].slice(); } }],
+    eq: p => { const t = distStats(p.xs, p.ws); return `E(X) = <b class="cg">${fmt(t.E, 3)}</b>   V(X) = <b class="cv">${fmt(t.V, 3)}</b>   σ = ${fmt(t.sd, 3)}`; },
+    say: () => "重い棒（確率の大きい所）の方へ、支点が動く。",
+    points: ["E(X) = Σ（値 × 確率）", "σ が大きい ＝ 平均から <b>はなれた値が出やすい</b>"],
+  },
+  ex: {
+    title: "コイン 3 枚", problem: "コインを 3 枚投げて、表の枚数を X とする。E(X) と V(X) を求めよ。",
+    p: { xs: [0, 1, 2, 3], ws: [1, 3, 3, 1], Elab: "3/2", Vlab: "3/4" },
+    steps: [
+      { say: "X = 0, 1, 2, 3 の確率は 1/8, 3/8, 3/8, 1/8（棒の高さ）。全部たすと 1。", eq: "P = 1/8, 3/8, 3/8, 1/8" },
+      { say: "値 × 確率 を全部たす：0 + 3/8 + 6/8 + 3/8 = 12/8。", eq: "E(X) = 0·1/8 + 1·3/8 + 2·3/8 + 3·1/8" },
+      { say: "<b>E(X) = 3/2</b>：棒グラフが <b>つりあう点</b>（左右対称なので まん中）。", eq: `E(X) = <b class="cg">3/2</b>` },
+      { say: "E(X<sup>2</sup>) = (0 + 3 + 12 + 9)/8 = 3。V(X) = 3 − (3/2)<sup>2</sup> = <b>3/4</b>（σ ≈ 0.87）。", eq: `V(X) = 3 − 9/4 = <b class="cv">3/4</b>` },
+    ],
+  },
+  pr: () => {
+    let ws;
+    do { const c = [ri(1, 7), ri(1, 7), ri(1, 7)].sort((a, b) => a - b); ws = [c[0], c[1] - c[0], c[2] - c[1], 10 - c[2]]; } while (ws.some(w => w <= 0) || new Set(ws).size < 3);
+    const xs = [1, 2, 3, 4], E = sum(xs.map((x, i) => x * ws[i])) / 10;
+    return {
+      title: "期待値を求める", problem: `X の確率分布が <span class="eq">X = 1, 2, 3, 4</span> で <span class="eq">P = ${ws.map(w => frs(w, 10)).join(", ")}</span> のとき、E(X) は？`,
+      p: { xs, ws },
+      choices: choices4(fmt(E, 2), [fmt(2.5, 2), fmt(E * 10, 2), fmt(E + .3, 2), fmt(E - .4, 2)]),
+      hint: ["値 × 確率 を 4 つ計算して たそう", "1×P₁ + 2×P₂ + 3×P₃ + 4×P₄"],
+      steps: [
+        { say: "棒の高さが 確率。", eq: `P = ${ws.map(w => frs(w, 10)).join(", ")}` },
+        { say: "値 × 確率 を全部たす。", eq: `E = ${xs.map((x, i) => `${x}·${frs(ws[i], 10)}`).join(" + ")} = ${frs(sum(xs.map((x, i) => x * ws[i])), 10)}` },
+        { say: `つりあう点 <b>E(X) = ${fmt(E, 2)}</b>。重い棒の方へ よっている。`, eq: `E(X) = <b class="cg">${fmt(E, 2)}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "Y = 2X + 1", problem: "サイコロの目を X、Y = 2X + 1 とする。E(Y) と V(Y) は？（E(X) = 7/2、V(X) = 35/12）",
+    p: { mode: "lin" },
+    choices: ["E = 8, V = 35/3", "E = 8, V = 35/6", "E = 7, V = 35/3", "E = 8, V = 47/12"],
+    hint: ["つりあう点も 2 倍して 1 ずらす", "ばらつき（はば）が 2 倍 → 分散は 2² 倍。+1 は ばらつきに関係ない"],
+    steps: [
+      { say: "X（サイコロの目）：E(X) = 7/2、V(X) = 35/12。", eq: "E(X) = 7/2,  V(X) = 35/12" },
+      { say: "Y = 2X + 1 は、分布を <b>横に 2 倍して 1 ずらしたもの</b>。", eq: "Y = 3, 5, 7, 9, 11, 13" },
+      { say: "つりあう点も 2 倍して +1：E(Y) = 2 × 7/2 + 1 = <b>8</b>。", eq: `E(aX + b) = aE(X) + b = <b class="cg">8</b>` },
+      { say: "はばは 2 倍 → 分散は 2<sup>2</sup> = <b>4 倍</b>。ずらす +1 は関係ない：V(Y) = 4 × 35/12 = <b>35/3</b>。", eq: `V(aX + b) = a<sup>2</sup>V(X) = <b class="cv">35/3</b>` },
+    ],
+  },
+  summary: ["E(X) = Σ x<sub>k</sub>p<sub>k</sub>（つりあう点）", "V(X) = E(X<sup>2</sup>) − {E(X)}<sup>2</sup>、σ = √V", "E(aX + b) = aE(X) + b、<b>V(aX + b) = a<sup>2</sup>V(X)</b>"],
+});
+
+/* --- 二項分布 --- */
+function binomViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg), full = k >= 99, lv = full ? 9 : Math.max(k, 0);
+  const n = p.n, pr = p.p, E = n * pr, sd = Math.sqrt(n * pr * (1 - pr)), F = p.feat || { E: 1, V: 2 };
+  let k0 = 0, k1 = n;
+  if (n > 40) { k0 = Math.max(0, Math.floor(E - 4.2 * sd)); k1 = Math.min(n, Math.ceil(E + 4.2 * sd)); }
+  const ks = range(k0, k1), ps = ks.map(j => binomP(n, pr, j)), mx = Math.max(...ps);
+  const x0 = 50, x1 = W - 40, slot = (x1 - x0) / ks.length, X = j => x0 + slot * (j - k0 + .5);
+  const yBot = H - 122, yTop = 110, Y = v => yBot - v / mx * (yBot - yTop), bw = Math.max(slot * .78, 1.5);
+  if (lv >= F.V) s("rect", { x: X(E - sd), y: yTop - 20, width: X(E + sd) - X(E - sd), height: yBot - yTop + 20, class: "f-gds " + nw(lv, F.V, "fadein") }, g);
+  ks.forEach((j, i) => {
+    const hl = p.hl === j && lv >= (F.hl ?? 0);
+    s("rect", { x: X(j) - bw / 2, y: Y(ps[i]), width: bw, height: yBot - Y(ps[i]), class: hl ? "f-wm s-wm" : "f-bls s-bl", "stroke-width": slot > 8 ? 1.4 : .5 }, g);
+    const every = ks.length <= 21 ? 1 : ks.length <= 45 ? 5 : 10;
+    if (j % every === 0) T(g, X(j), yBot + 20, String(j), "mono " + (hl ? "tw b" : "mut"), 13);
+    if (p.fracLabels) T(g, X(j), Y(ps[i]) - 8, `${nCr(n, j)}/${2 ** n}`, "mono b tb", 14);
+    if (box.intro) s("rect", { x: X(j) - slot / 2, y: yTop - 20, width: slot, height: yBot - yTop + 40, fill: "transparent", style: "cursor:pointer" }, g).addEventListener("click", () => { p.hl = j; box.redraw(); });
+  });
+  s("line", { x1: x0 - 6, x2: x1 + 6, y1: yBot, y2: yBot, class: "ink", "stroke-width": 2 }, g);
+  T(g, x1 + 8, yBot + 20, "X", "disp", 17, "start");
+  if (lv >= F.E) fulcrum(g, X(E), yBot, `E = np = ${p.Elab || fmt(E, 2)}`, nw(lv, F.E, "pop"));
+  if (lv >= F.V) sdBand(g, X(E - sd), X(E + sd), yBot + 84, `σ = √(np(1−p)) ≈ ${fmt(sd, 2)}`, nw(lv, F.V, "fadein"));
+  if (p.hl != null && lv >= (F.val ?? 99)) badge(g, X(p.hl), Y(binomP(n, pr, p.hl)) - 16, `≈ ${fmt(binomP(n, pr, p.hl), 3)}`, "f-wm", "tp", 14).classList.add("pop");
+  if (box.intro && p.hl != null && p.hl <= n) badge(g, clamp(X(p.hl), 90, W - 90), yTop - 34, `P(X = ${p.hl}) ≈ ${fmt(binomP(n, pr, p.hl), 4)}`, "f-wm", "tp", 14);
+}
+const BINOM_SET = [[1, 2, [10, 20, 40, 100]], [1, 3, [9, 18, 30, 60]], [1, 6, [12, 36, 60]], [1, 5, [10, 25, 50]]];
+unit({
+  id: "u-binom", cat: "stat", name: "二項分布", sub: "n 回中 何回 起こる？",
+  gen: `P(X = k) = <sub>n</sub>C<sub>k</sub> p<sup>k</sup>(1 − p)<sup>n−k</sup>   <span class="cg">E = np</span>   <span class="cv">V = np(1 − p)</span>`,
+  viz: binomViz,
+  intro: {
+    title: "B(n, p) の形", hint: "n と p を動かす・棒をタップで確率",
+    lead: "確率 p のことを <b>n 回</b> くり返したときの 回数 X の分布。山のまん中が <b>np</b>。",
+    p: { n: 10, p: .5, hl: 5 },
+    controls: [
+      { key: "n", label: "回数 n", min: 1, max: 60, on: p => { p.hl = Math.min(p.hl ?? 0, p.n); } },
+      { key: "p", label: "確率 p", min: .05, max: .95, step: .05, fmt: v => fmt(v, 2) },
+    ],
+    eq: p => `E = ${p.n} × ${fmt(p.p, 2)} = <b class="cg">${fmt(p.n * p.p, 2)}</b>   V = ${fmt(p.n * p.p, 2)} × ${fmt(1 - p.p, 2)} = <b class="cv">${fmt(p.n * p.p * (1 - p.p), 3)}</b>`,
+    say: p => p.n >= 30 ? "n が大きいと、左右対称な <b>つりがね形</b> に近づく（→ 正規分布）。" : "p が 1/2 から はなれると、山が かたよる。",
+  },
+  ex: {
+    title: "コイン 4 回", problem: "コインを 4 回投げ、表の回数を X とする。X の分布と E(X)、V(X) を求めよ。",
+    p: { n: 4, p: .5, fracLabels: true, Elab: "2" },
+    steps: [
+      { say: "表が k 回：<sub>4</sub>C<sub>k</sub>(1/2)<sup>4</sup>。並び方は 1, 4, 6, 4, 1 通り（÷16）。", eq: "P(X = k) = <sub>4</sub>C<sub>k</sub> / 16" },
+      { say: "つりあう点 <b>E(X) = np = 4 × 1/2 = 2</b>。", eq: `E(X) = 4 × ½ = <b class="cg">2</b>` },
+      { say: "<b>V(X) = np(1 − p) = 4 × ½ × ½ = 1</b>。σ = 1（金色のはん囲が よく起こる）。", eq: `V(X) = 4 × ½ × ½ = <b class="cv">1</b>` },
+    ],
+  },
+  pr: () => {
+    const [pn, pd, ns] = pick(BINOM_SET), n = pick(ns), E = [n * pn, pd], V = [n * pn * (pd - pn), pd * pd];
+    const f = ([a, b]) => frs(a, b), c = (e, v) => `E = ${e}, V = ${v}`;
+    return {
+      title: "E と V", problem: `確率 ${frs(pn, pd)} で当たるくじを ${n} 回引く（毎回もどす）。当たりの回数 X の E(X) と V(X) は？`,
+      p: { n, p: pn / pd, Elab: f(E) },
+      choices: choices4(c(f(E), f(V)), [c(f(E), f(E)), c(f(E), frs(n * pn * pn, pd * pd)), c(frs(n * (pd - pn), pd), f(V)), c(f(E), frs(V[0], V[1] * 2)), c(frs(E[0], E[1] * 2), f(V))]),
+      hint: ["X は 二項分布 B(n, p)", "E = np、V = np(1 − p)"],
+      steps: [
+        { say: `X は <b>B(${n}, ${frs(pn, pd)})</b>。`, eq: `n = ${n},  p = ${frs(pn, pd)}` },
+        { say: "つりあう点 E = np。", eq: `E = ${n} × ${frs(pn, pd)} = <b class="cg">${f(E)}</b>` },
+        { say: "ばらつき V = np(1 − p)。", eq: `V = ${n} × ${frs(pn, pd)} × ${frs(pd - pn, pd)} = <b class="cv">${f(V)}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "ちょうど 2 回", problem: "サイコロを 5 回投げる。<b>6 の目がちょうど 2 回</b> 出る確率は？",
+    p: { n: 5, p: 1 / 6, hl: 2, feat: { E: 99, V: 99, hl: 1, val: 2 } },
+    choices: [fr(625, 3888), fr(125, 7776), fr(5, 18), fr(125, 3888)],
+    hint: ["6 が出る 2 回を 5 回のうち どこにするか：<sub>5</sub>C<sub>2</sub>", "1 通りの確率 (1/6)<sup>2</sup>(5/6)<sup>3</sup>"],
+    steps: [
+      { say: "1 回で 6 が出る確率 1/6。5 回は おたがいに影響しない（独立）。X は B(5, 1/6)。", eq: "X は B(5, 1/6)" },
+      { say: "6 が 2 回 の並び方は <sub>5</sub>C<sub>2</sub> = <b>10 通り</b>（○○××× の並べかえ）。", eq: "<sub>5</sub>C<sub>2</sub> = 10" },
+      { say: "1 通りの確率 (1/6)<sup>2</sup>(5/6)<sup>3</sup> = 125/7776。×10 で <b>625/3888</b>（≈ 0.16）。", eq: `10 × <span class="fr"><i>125</i><i>7776</i></span> = <b class="cw">${fr(625, 3888)}</b>` },
+    ],
+  },
+  summary: ["P(X = k) = <sub>n</sub>C<sub>k</sub> p<sup>k</sup>(1 − p)<sup>n−k</sup>", "<b>E(X) = np</b>、<b>V(X) = np(1 − p)</b>", "n が大きいと 正規分布に近づく"],
+});
+
+/* --- 正規分布 --- */
+function normViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg), full = k >= 99, lv = full ? 9 : p.kmap ? p.kmap[Math.max(k, 0)] : Math.max(k, 0);
+  const { m, sd } = p, xa = m - 3.7 * sd, xb = m + 3.7 * sd, x0 = 50, x1 = W - 40;
+  const X = x => x0 + (x - xa) / (xb - xa) * (x1 - x0);
+  const yAx = H - 128, yZ = H - 64, yTop = 108, pk = npdf(m, m, sd), Y = f => yAx - f / pk * (yAx - yTop);
+  const lo = p.lo ?? -Infinity, hi = p.hi ?? Infinity, cl = v => clamp(v, xa, xb);
+  if (p.binom) {
+    const { n, p: q } = p.binom;
+    for (let j = Math.ceil(xa); j <= Math.floor(xb); j++) {
+      const v = binomP(n, q, j), hl = lv >= 2 && j >= lo && j <= hi;
+      s("rect", { x: X(j - .5) + .3, y: Y(v), width: Math.max(X(j + .5) - X(j - .5) - .6, .8), height: yAx - Y(v), class: hl ? "f-wms" : "f-bls" }, g);
+    }
+  }
+  const f = x => npdf(x, m, sd);
+  if (lv >= 2) {
+    s("path", { d: curvePath(f, cl(lo), cl(hi), X, Y, 100, true), class: "f-wms " + nw(lv, 2, "fadein") }, g);
+    const prob = Phi((Math.min(hi, 1e9) - m) / sd) - Phi((Math.max(lo, -1e9) - m) / sd);
+    const cx = X((cl(lo) + cl(hi)) / 2), lab = `${fmt(prob * 100, 1)} %`;
+    badge(g, clamp(cx, 80, W - 80), Math.max((Y(f(clamp(m, cl(lo), cl(hi)))) + yAx) / 2 + 8, yAx - 60), lab, "f-wm", "tp", 17).classList.add(lv === 2 ? "pop" : "x");
+  }
+  s("path", { d: curvePath(f, xa, xb, X, Y), class: "f-none s-ink", "stroke-width": 2.5 }, g);
+  s("line", { x1: x0, x2: x1, y1: yAx, y2: yAx, class: "ink" }, g);
+  T(g, x1 + 4, yAx + 5, "X", "disp", 16, "start");
+  for (let j = -3; j <= 3; j++) {
+    s("line", { x1: X(m + j * sd), x2: X(m + j * sd), y1: yAx, y2: yAx + 6, class: "ink", "stroke-width": 1.2 }, g);
+    T(g, X(m + j * sd), yAx + 22, fmt(m + j * sd, 2), "mono " + (j === 0 ? "b ta" : "mut"), 13);
+  }
+  s("line", { x1: X(m), x2: X(m), y1: Y(pk), y2: yAx, class: "s-ac dash", "stroke-width": 1.3 }, g);
+  T(g, X(m), Y(pk) - 10, `平均 ${fmt(m, 2)}`, "b ta", 14);
+  if (sd > 0) { arrow(g, X(m), Y(f(m + sd)), X(m + sd) - 2, Y(f(m + sd)), "wm", 1.8); T(g, (X(m) + X(m + sd)) / 2, Y(f(m + sd)) - 8, `σ = ${fmt(sd, 2)}`, "mono b tw", 13); }
+  for (const v of [lo, hi]) if (isFinite(v)) {
+    s("line", { x1: X(cl(v)), x2: X(cl(v)), y1: yTop - 10, y2: yAx, class: "s-wm", "stroke-width": 2 }, g);
+    if (p.vlab) T(g, X(cl(v)), yTop - 16, `${fmt(v, 2)}${p.unit || ""}`, "mono b tw", 14);
+  }
+  if (lv >= 1) {
+    const gz = s("g", { class: nw(lv, 1, "fadein") }, g);
+    s("line", { x1: x0, x2: x1, y1: yZ, y2: yZ, class: "s-vi", "stroke-width": 2 }, gz);
+    T(gz, x1 + 4, yZ + 5, "Z", "disp tv", 16, "start");
+    for (let j = -3; j <= 3; j++) {
+      s("line", { x1: X(m + j * sd), x2: X(m + j * sd), y1: yAx + 28, y2: yZ - 4, class: "thin dash" }, gz);
+      T(gz, X(m + j * sd), yZ + 20, String(j), "mono tv b", 13);
+    }
+    for (const v of [lo, hi]) if (isFinite(v)) badge(gz, X(cl(v)), yZ - 8, `z = ${fmt((v - m) / sd, 2)}`, "f-vi", "tp", 13);
+  }
+  if (lv >= 3 && p.ans) badge(g, W - 50, 88, p.ans, "f-ac", "tp", 17, "end").classList.add("pop");
+}
+const zTab = z => pz(z).toFixed(4);
+unit({
+  id: "u-normal", cat: "stat", name: "正規分布", sub: "つりがね形の分布",
+  gen: `Z = <span class="fr"><i>X − <span class="ca">m</span></i><i><span class="cw">σ</span></i></span>  →  N(0, 1)   p(z) = P(0 ≦ Z ≦ z)`,
+  viz: normViz,
+  intro: {
+    title: "面積 ＝ 確率", hint: "はん囲を動かして 面積（%）を見よう",
+    lead: "山の下の <b>面積が 確率</b>。平均から ±1σ、±2σ に入る割合は いつも同じ。",
+    p: { m: 50, sd: 10, zlo: -1, zhi: 1, lo: 40, hi: 60, vlab: true },
+    controls: [
+      { seg: [[1, "±1σ"], [2, "±2σ"], [3, "±3σ"]], key: "pre", on: p => { p.zlo = -p.pre; p.zhi = p.pre; p.lo = p.m - p.pre * p.sd; p.hi = p.m + p.pre * p.sd; } },
+      { key: "zlo", label: "左はし z", min: -3, max: 3, step: .1, fmt: v => fmt(v, 1), on: p => { if (p.zlo > p.zhi) p.zhi = p.zlo; p.lo = p.m + p.zlo * p.sd; p.hi = p.m + p.zhi * p.sd; } },
+      { key: "zhi", label: "右はし z", min: -3, max: 3, step: .1, fmt: v => fmt(v, 1), on: p => { if (p.zhi < p.zlo) p.zlo = p.zhi; p.lo = p.m + p.zlo * p.sd; p.hi = p.m + p.zhi * p.sd; } },
+    ],
+    eq: p => `P(${fmt(p.zlo, 1)} ≦ Z ≦ ${fmt(p.zhi, 1)}) = <b class="cw">${fmt((Phi(p.zhi) - Phi(p.zlo)) * 100, 1)} %</b>`,
+    say: () => "±1σ → 約 68%、±2σ → 約 95%、±3σ → 約 99.7%。",
+    points: ["X を <b>標準化</b>（Z = (X − m)/σ）すると、表 1 つで 計算できる", "左右対称：P(Z ≧ 0) = 0.5"],
+  },
+  ex: {
+    title: "176 cm 以上の割合", problem: "身長 X が 正規分布 N(170, 6<sup>2</sup>) にしたがう。<b>176 cm 以上</b> の人の割合は？（p(1) = 0.3413）",
+    p: { m: 170, sd: 6, lo: 176, hi: null, vlab: true, unit: "cm", ans: "約 15.9 %" },
+    steps: [
+      { say: "平均 170 を中心にした 山。<b>176 cm より右</b> の面積を求めたい。", eq: "P(X ≧ 176) = ?" },
+      { say: "<b>標準化</b>：z = (176 − 170)/6 = <b>1</b>。X の 176 は Z の 1 にあたる。", eq: "z = (176 − 170) ÷ 6 = 1" },
+      { say: "右半分は 0.5。そこから 0 〜 1 の部分 p(1) = 0.3413 をひく。", eq: "P(Z ≧ 1) = 0.5 − 0.3413 = 0.1587" },
+      { say: "約 <b>15.9 %</b>（100 人中 16 人くらい）。", eq: `<b class="cw">約 15.9 %</b>` },
+    ],
+  },
+  pr: () => {
+    const m = pick([50, 60, 100, 170]), sd = pick([4, 5, 10]), z = pick([.5, 1, 1.5, 2]), type = pick(["ge", "btw", "le"]);
+    const pzz = +zTab(z);
+    let lo = null, hi = null, ans, q, w;
+    if (type === "ge") { lo = m + z * sd; ans = .5 - pzz; q = `X ≧ ${lo}`; w = [pzz, .5 + pzz, 2 * pzz]; }
+    else if (type === "btw") { lo = m - z * sd; hi = m + z * sd; ans = 2 * pzz; q = `${lo} ≦ X ≦ ${hi}`; w = [pzz, .5 - pzz, .5 + pzz]; }
+    else { hi = m + z * sd; ans = .5 + pzz; q = `X ≦ ${hi}`; w = [pzz, .5 - pzz, 2 * pzz]; }
+    const f4 = v => v.toFixed(4);
+    return {
+      title: "確率を求める", problem: `X が N(${m}, ${sd}<sup>2</sup>) にしたがうとき、<b>P(${q})</b> は？（p(${z}) = ${zTab(z)}）`,
+      p: { m, sd, lo, hi, vlab: true, ans: f4(ans) },
+      choices: choices4(f4(ans), w.map(f4)),
+      hint: ["まず 標準化して z を出そう", "図の どの部分の面積か考えて、0.5 や p(z) を たす・ひく"],
+      steps: [
+        { say: `山の <b>赤い線</b> で区切られた部分の面積を求める。`, eq: `P(${q}) = ?` },
+        { say: `標準化：z = ± (${z * sd})/${sd} = ${type === "btw" ? "±" : ""}${z}。`, eq: `z = ${type === "btw" ? "±" : ""}${z}` },
+        { say: type === "ge" ? `右半分 0.5 から p(${z}) をひく。` : type === "btw" ? `左右対称なので p(${z}) の 2 倍。` : `左半分 0.5 に p(${z}) をたす。`, eq: type === "ge" ? `0.5 − ${zTab(z)}` : type === "btw" ? `2 × ${zTab(z)}` : `0.5 + ${zTab(z)}` },
+        { say: `答え <b>${f4(ans)}</b>。`, eq: `<b class="cw">${f4(ans)}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "二項分布を 正規分布で", problem: "コインを 400 回投げる。表が <b>220 回以上</b> 出る確率は？（p(2) = 0.4772）",
+    p: { m: 200, sd: 10, lo: 220, hi: null, vlab: true, binom: { n: 400, p: .5 }, kmap: [0, 0, 1, 3], ans: "0.0228" },
+    choices: ["0.0228", "0.4772", "0.9772", "0.0456"],
+    hint: ["X は B(400, 1/2)。m = np、σ = √(np(1 − p))", "z = (220 − 200)/10"],
+    steps: [
+      { say: "X は B(400, ½)。n が大きいと 棒グラフは <b>正規分布の山に そっくり</b>。", eq: "B(400, ½) ≒ 正規分布" },
+      { say: "m = np = 200、σ = √(400 × ½ × ½) = √100 = <b>10</b>。", eq: "m = 200,  σ = 10" },
+      { say: "標準化：z = (220 − 200)/10 = <b>2</b>。", eq: "z = 2" },
+      { say: "P(Z ≧ 2) = 0.5 − 0.4772 = <b>0.0228</b>（約 2%：めったに起こらない）。", eq: `<b class="cw">0.0228</b>` },
+    ],
+  },
+  summary: ["N(m, σ<sup>2</sup>) は <b>Z = (X − m)/σ</b> で N(0, 1) へ", "面積 ＝ 確率。0.5 と p(z) を たす・ひく", "B(n, p) は n が大きいと N(np, np(1 − p)) で近似"],
+});
+
+/* --- 推定：信頼区間 --- */
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+function estViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg), full = k >= 99, lv = full ? 9 : Math.max(k, 0);
+  const x0 = 50, x1 = W - 40;
+  if (p.mode === "sim") {
+    const se = p.sd / Math.sqrt(p.n), half = p.conf * se, R = 15, X = x => x0 + (x - (p.m - R)) / (2 * R) * (x1 - x0);
+    const rows = p.zs.length, yT = 112, yB = H - 66, rh = (yB - yT) / rows;
+    let hit = 0;
+    s("line", { x1: X(p.m), x2: X(p.m), y1: yT - 22, y2: yB + 6, class: "s-wm", "stroke-width": 2.2 }, g);
+    T(g, X(p.m), yT - 30, `本当の母平均 m = ${p.m}（ふつうは 見えない）`, "b tw", 14);
+    p.zs.forEach((z, i) => {
+      const c = p.m + z * se, ok = Math.abs(c - p.m) <= half, y = yT + rh * (i + .5);
+      if (ok) hit++;
+      s("line", { x1: X(clamp(c - half, p.m - R, p.m + R)), x2: X(clamp(c + half, p.m - R, p.m + R)), y1: y, y2: y, class: ok ? "s-ac" : "s-wm", "stroke-width": Math.min(4, rh * .5), "stroke-linecap": "round", opacity: ok ? .8 : 1 }, g);
+      s("circle", { cx: X(c), cy: y, r: Math.min(4, rh * .4), class: "f-ink" }, g);
+    });
+    s("line", { x1: x0, x2: x1, y1: yB + 8, y2: yB + 8, class: "ink" }, g);
+    for (let v = p.m - R; v <= p.m + R; v += 5) T(g, X(v), yB + 28, String(v), "mono mut", 12);
+    badge(g, W - 46, 86, `${rows} 本中 ${hit} 本が m をふくむ`, "f-ac", "tp", 15, "end");
+    return;
+  }
+  if (p.mode === "width") {
+    const se = p.sd / Math.sqrt(p.n), half = 1.96 * se, X = x => x0 + (x - (p.xb - half * 1.3)) / (half * 2.6) * (x1 - x0);
+    const row = (y, hh, lab, cls, ex) => {
+      const gg = s("g", { class: ex || "" }, g);
+      s("rect", { x: X(p.xb - hh), y: y - 14, width: X(p.xb + hh) - X(p.xb - hh), height: 28, rx: 14, class: cls, "stroke-width": 2 }, gg);
+      s("circle", { cx: X(p.xb), cy: y, r: 5, class: "f-ink" }, gg);
+      T(gg, X(p.xb - hh) - 8, y + 5, lab, "b", 15, "end");
+    };
+    const yy = Math.max(130, H * .3);
+    row(yy, half, `n = ${p.n}`, "f-bls s-bl");
+    T(g, X(p.xb), yy - 24, `はば ${fmt(2 * half, 2)}`, "mono b tb", 14);
+    if (lv >= 1) { row(yy + 90, half / 2, `4n = ${4 * p.n}`, "f-wms s-wm", nw(lv, 1, "pop")); T(g, X(p.xb), yy + 66, `はば ${fmt(half, 2)}（半分！）`, "mono b tw " + nw(lv, 1, "fadein"), 14); }
+    if (lv >= 2) { row(yy + 180, half / Math.SQRT2, `2n = ${2 * p.n}`, "f-chip s-mut", "fadein"); T(g, X(p.xb), yy + 156, `はば ${fmt(2 * half / Math.SQRT2, 2)}（約 0.71 倍）`, "mono mut", 14); }
+    return;
+  }
+  /* calc */
+  const se = p.sd / Math.sqrt(p.n), half = 1.96 * se, X = x => x0 + (x - (p.xb - half * 1.5)) / (half * 3) * (x1 - x0), ya = Math.max(H * .58, 220);
+  s("line", { x1: x0, x2: x1, y1: ya, y2: ya, class: "ink", "stroke-width": 2 }, g);
+  if (lv >= 3) {
+    s("rect", { x: X(p.xb - half), y: ya - 22, width: X(p.xb + half) - X(p.xb - half), height: 44, rx: 6, class: "f-acs s-ac fadein", "stroke-width": 2 }, g);
+    T(g, X(p.xb - half), ya + 44, fmt(p.xb - half, 3), "mono b ta", 15); T(g, X(p.xb + half), ya + 44, fmt(p.xb + half, 3), "mono b ta", 15);
+    T(g, X(p.xb), ya + 78, "m は この はん囲にある と考える（信頼度 95%）", "b ta", 15);
+  }
+  s("circle", { cx: X(p.xb), cy: ya, r: 8, class: "f-ink" }, g);
+  T(g, X(p.xb), ya + (lv >= 3 ? -32 : 30), `x̄ = ${p.xb}`, "mono b", 16);
+  if (lv >= 1) {
+    const yy = ya - 70;
+    s("line", { x1: X(p.xb), x2: X(p.xb + se), y1: yy, y2: yy, class: "s-bl " + nw(lv, 1, "draw"), "stroke-width": 5, "stroke-linecap": "round" }, g);
+    T(g, X(p.xb + se) + 8, yy + 5, `σ/√n = ${p.sd}/√${p.n} = ${fmt(se, 3)}`, "mono b tb", 14, "start");
+  }
+  if (lv >= 2) {
+    const yy = ya - 120;
+    arrow(g, X(p.xb), yy, X(p.xb - half), yy, "wm", 2.5, nw(lv, 2, "fadein")); arrow(g, X(p.xb), yy, X(p.xb + half), yy, "wm", 2.5, nw(lv, 2, "fadein"));
+    s("line", { x1: X(p.xb - half), x2: X(p.xb - half), y1: yy, y2: ya, class: "s-wm dash" }, g);
+    s("line", { x1: X(p.xb + half), x2: X(p.xb + half), y1: yy, y2: ya, class: "s-wm dash" }, g);
+    T(g, X(p.xb), yy - 12, `1.96 × ${fmt(se, 3)} = ${fmt(half, 3)}`, "mono b tw", 15);
+  }
+}
+unit({
+  id: "u-est", cat: "stat", name: "母平均の推定", sub: "信頼区間",
+  gen: `<span class="ca">x̄</span> − 1.96·<span class="fr"><i>σ</i><i>√n</i></span> ≦ m ≦ <span class="ca">x̄</span> + 1.96·<span class="fr"><i>σ</i><i>√n</i></span>  （信頼度 95%）`,
+  viz: estViz,
+  intro: {
+    title: "95% の意味", hint: "「標本をとる」を何回か おそう",
+    lead: "標本をとるたびに 区間は ずれる。<b>100 回やれば 95 回くらい</b> 本当の m をふくむ ── これが 信頼度 95%。",
+    p: { mode: "sim", m: 50, sd: 10, n: 25, conf: 1.96, zs: Array.from({ length: 30 }, gauss) },
+    controls: [
+      { btn: [["🎲 標本をとる（30 回）", p => { p.zs = Array.from({ length: 30 }, gauss); }]] },
+      { seg: [[1.96, "信頼度 95%"], [2.58, "信頼度 99%"]], key: "conf" },
+      { key: "n", label: "標本の大きさ n", min: 4, max: 100 },
+    ],
+    eq: p => `区間のはば = 2 × ${p.conf} × ${p.sd}/√${p.n} = <b class="cw">${fmt(2 * p.conf * p.sd / Math.sqrt(p.n), 2)}</b>`,
+    say: () => "<b class=\"ca\">緑</b> = m をふくむ区間、<b>赤</b> = はずれた区間。",
+    points: ["n を大きく → 区間は <b>せまく</b>（精しくなる）", "99% にすると 区間は <b>広く</b> なる"],
+  },
+  ex: {
+    title: "信頼区間を求める", problem: "製品 100 個を調べたら 平均 50.2 g。母標準偏差 σ = 2 g として、母平均 m を <b>信頼度 95%</b> で推定せよ。",
+    p: { mode: "calc", xb: 50.2, sd: 2, n: 100 },
+    steps: [
+      { say: "標本平均 <b>x̄ = 50.2</b>（数直線の点）。m は このあたり。", eq: "x̄ = 50.2" },
+      { say: "標本平均の ばらつき：<b>σ/√n</b> = 2/√100 = 0.2。", eq: "σ/√n = 2 ÷ 10 = 0.2" },
+      { say: "95% なら その <b>1.96 倍</b>：1.96 × 0.2 = 0.392 を 左右にのばす。", eq: "1.96 × 0.2 = 0.392" },
+      { say: "<b>49.808 ≦ m ≦ 50.592</b>（約 49.8 〜 50.6 g）。", eq: `<b class="cw">49.808 ≦ m ≦ 50.592</b>` },
+    ],
+  },
+  pr: () => {
+    const [n, sd] = pick([[25, 5], [36, 6], [64, 8], [100, 10], [100, 5], [144, 6], [400, 10]]);
+    const xb = ri(40, 80) + ri(0, 9) / 10, se = sd / Math.sqrt(n), half = 1.96 * se;
+    const iv = hh => `${fmt(xb - hh, 3)} ≦ m ≦ ${fmt(xb + hh, 3)}`;
+    return {
+      title: "信頼区間", problem: `大きさ ${n} の標本の平均が ${xb}、母標準偏差 ${sd}。母平均 m の <b>信頼度 95%</b> の信頼区間は？`,
+      p: { mode: "calc", xb, sd, n }, txt: true,
+      choices: choices4(iv(half), [iv(1.96 * sd), iv(2.58 * se), iv(1.96 * sd / n)]),
+      hint: ["まず σ/√n を計算", "x̄ ± 1.96 × σ/√n"],
+      steps: [
+        { say: `x̄ = <b>${xb}</b>。`, eq: `x̄ = ${xb}` },
+        { say: `σ/√n = ${sd}/√${n} = ${fmt(se, 3)}。`, eq: `σ/√n = ${fmt(se, 3)}` },
+        { say: `1.96 倍：${fmt(half, 3)}。`, eq: `1.96 × ${fmt(se, 3)} = ${fmt(half, 3)}` },
+        { say: `<b>${iv(half)}</b>`, eq: `<b class="cw">${iv(half)}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "はばを半分に", problem: "信頼区間の <b>はばを半分</b> にするには、標本の大きさ n を何倍にすればよい？",
+    p: { mode: "width", xb: 50, sd: 10, n: 25 },
+    choices: ["4 倍", "2 倍", "16 倍", "1/2 倍"],
+    hint: ["はば = 2 × 1.96 × σ/√n", "n は √ の中。√n を 2 倍にするには？"],
+    steps: [
+      { say: "はば = 2 × 1.96 × σ/√n。n は <b>分母の √ の中</b>。", eq: "はば ∝ 1/√n" },
+      { say: "n を 4 倍 → √n は 2 倍 → はばは <b>半分</b>。", eq: "√(4n) = 2√n" },
+      { say: "答え <b>4 倍</b>。2 倍では はばは 1/√2 ≈ 0.71 倍にしかならない。", eq: `<b class="cw">4 倍</b>` },
+    ],
+  },
+  summary: ["信頼度 95%：x̄ ± <b>1.96</b>·σ/√n（99% なら 2.58）", "「100 回中 95 回くらい m をふくむ」という意味", "はばは 1/√n に比例 → 半分にするには <b>n を 4 倍</b>"],
+});
+
+/* --- 仮説検定 --- */
+function testViz(svg, p, k, box) {
+  const { W, H } = box, g = s("g", {}, svg), full = k >= 99, lv = full ? 9 : Math.max(k, 0);
+  const x0 = 50, x1 = W - 40, yBot = H - 100, yTop = 120;
+  let rej, tail;
+  if (p.mode === "norm") {
+    const { m, sd } = p, xa = m - 3.8 * sd, xb = m + 3.8 * sd, X = x => x0 + (x - xa) / (xb - xa) * (x1 - x0), pk = npdf(m, m, sd), Y = f => yBot - f / pk * (yBot - yTop), f = x => npdf(x, m, sd);
+    const c = m + 1.645 * sd, z = (p.x - m) / sd; rej = z >= 1.645;
+    if (lv >= 2) { s("path", { d: curvePath(f, c, xb, X, Y, 60, true), class: "f-wms " + nw(lv, 2, "fadein") }, g); T(g, X(c) + 8, Y(f(c)) - 26, "棄却域（右はし 5%）", "b tw", 14, "start"); s("line", { x1: X(c), x2: X(c), y1: Y(f(c)) - 14, y2: yBot, class: "s-wm", "stroke-width": 1.6 }, g); T(g, X(c), yBot + 40, "z = 1.645", "mono b tw", 13); }
+    s("path", { d: curvePath(f, xa, xb, X, Y), class: "f-none s-ink", "stroke-width": 2.5 }, g);
+    s("line", { x1: x0, x2: x1, y1: yBot, y2: yBot, class: "ink" }, g);
+    for (let j = -3; j <= 3; j++) T(g, X(m + j * sd), yBot + 20, fmt(m + j * sd, 1), "mono mut", 12);
+    T(g, X(m), Y(pk) - 10, `仮説どおりなら（m = ${m}）`, "b ta", 14);
+    if (lv >= 1) { const xo = X(clamp(p.x, xa, xb)); s("line", { x1: xo, x2: xo, y1: yTop - 20, y2: yBot, class: "s-bl", "stroke-width": 3 }, g); badge(g, xo, yTop - 28, `実際 ${p.x}（z ≈ ${fmt(z, 2)}）`, "f-bl", "tp", 14); }
+  } else {
+    const { n, p0 } = p, ks = range(0, n), ps = ks.map(j => binomP(n, p0, j)), mx = Math.max(...ps);
+    const tl = j => sum(ps.slice(j)); let c = n + 1; for (let j = 0; j <= n; j++) if (tl(j) <= p.alpha) { c = j; break; }
+    tail = tl(p.x); rej = tail < p.alpha;
+    const slot = (x1 - x0) / (n + 1), X = j => x0 + slot * (j + .5), Y = v => yBot - v / mx * (yBot - yTop), bw = slot * .78;
+    if (lv >= 3) { s("rect", { x: X(c) - slot / 2, y: yTop - 34, width: X(n) - X(c) + slot, height: yBot - yTop + 34, class: "f-wms " + nw(lv, 3, "fadein") }, g); T(g, (X(c) + X(n)) / 2, yTop - 40, `棄却域（${c} 回以上）`, "b tw", 14); }
+    ks.forEach((j, i) => {
+      const gold = lv >= 2 && j >= p.x;
+      s("rect", { x: X(j) - bw / 2, y: Y(ps[i]), width: bw, height: yBot - Y(ps[i]), class: gold ? "f-gd s-gd" : "f-bls s-bl", "stroke-width": 1.2 }, g);
+      if (n <= 24 || j % 5 === 0) T(g, X(j), yBot + 20, String(j), "mono " + (j === p.x && lv >= 1 ? "b tb" : "mut"), 12);
+    });
+    s("line", { x1: x0, x2: x1, y1: yBot, y2: yBot, class: "ink" }, g);
+    T(g, X(n * p0), Math.min(Y(mx) - 12, yTop - 54), `仮説「ふつう（p = ${frs(Math.round(p0 * 100), 100)}）」なら こう分布する`, "b ta", 14);
+    if (lv >= 1) { s("polygon", { points: `${X(p.x)},${Y(ps[p.x]) - 6} ${X(p.x) - 9},${Y(ps[p.x]) - 22} ${X(p.x) + 9},${Y(ps[p.x]) - 22}`, class: "f-bl " + nw(lv, 1, "pop") }, g); badge(g, X(p.x), Y(ps[p.x]) - 32, `実際 ${p.x} 回`, "f-bl", "tp", 13); }
+    if (lv >= 2) badge(g, clamp(X((p.x + n) / 2) + 20, 110, W - 110), yBot - 40 - (yBot - yTop) * .3, `P(X ≧ ${p.x}) ≈ ${fmt(tail, 3)}`, "f-gd", "tp", 15).classList.add(lv === 2 ? "pop" : "x");
+  }
+  if (lv >= 3) {
+    const gg = s("g", { class: "pop", transform: `rotate(-10 ${W - 110} 150)` }, g);
+    s("circle", { cx: W - 110, cy: 150, r: 52, class: "f-none " + (rej ? "s-wm" : "s-bl"), "stroke-width": 4 }, gg);
+    T(gg, W - 110, 146, rej ? "棄却" : "棄却", "disp " + (rej ? "tw" : "tb"), 22);
+    T(gg, W - 110, 172, rej ? "する" : "できない", "b " + (rej ? "tw" : "tb"), 15);
+  }
+}
+const tailB = (n, x) => sum(range(x, n).map(j => binomP(n, .5, j)));
+unit({
+  id: "u-test", cat: "stat", name: "仮説検定", sub: "めずらしい？ ふつう？",
+  gen: `仮説のもとで P(観測した結果 以上) &lt; <span class="cw">0.05</span>  →  仮説を <b class="cw">棄却</b>`,
+  viz: testViz,
+  intro: {
+    title: "めずらしさを はかる", hint: "表の回数を動かして 判定を見よう",
+    lead: "「ふつうのコイン」と仮定して、<b>実際の結果が どれくらい めずらしいか</b> を確率で はかる。5% より めずらしければ 仮定を捨てる（棄却）。",
+    p: { n: 20, p0: .5, x: 14, alpha: .05 },
+    controls: [
+      { key: "x", label: "表の回数", min: 8, max: 20 },
+      { seg: [[.05, "有意水準 5%"], [.01, "有意水準 1%"]], key: "alpha" },
+    ],
+    eq: p => { const t = tailB(p.n, p.x); return `P(X ≧ ${p.x}) = <b class="cg">${fmt(t, 4)}</b> ${t < p.alpha ? "&lt;" : "≧"} ${p.alpha}  →  <b class="${t < p.alpha ? "cw" : "cb"}">${t < p.alpha ? "棄却する" : "棄却できない"}</b>`; },
+    say: p => tailB(p.n, p.x) < p.alpha ? "ふつうのコインでは めったに起こらない → <b>表が出やすい</b> と判断。" : "ふつうのコインでも よく起こる → 表が出やすいとは <b>言えない</b>。",
+    points: ["「棄却できない」は「ふつうと証明された」ではない", "有意水準を 1% にすると、きびしく なる"],
+  },
+  ex: {
+    title: "コイン 20 回で 表 15 回", problem: "コインを 20 回投げたら 表が 15 回。このコインは 表が出やすいと判断してよいか。<b>有意水準 5%（片側）</b> で検定せよ。",
+    p: { n: 20, p0: .5, x: 15, alpha: .05 },
+    steps: [
+      { say: "仮説：「このコインは <b>ふつう</b>（p = 1/2）」と考える。そのとき 表の回数は この山になる。", eq: "仮説 H₀：p = 1/2" },
+      { say: "実際は <b>15 回</b>（▼ の位置）。", eq: "X = 15" },
+      { say: "15 回以上になる確率 P(X ≧ 15) ≈ <b>0.021</b>（金色の棒をたしたもの）。", eq: "P(X ≧ 15) ≈ 0.021" },
+      { say: "0.021 &lt; 0.05 → ふつうなら めったに起こらない → 仮説を <b>棄却</b>。表が出やすいと判断してよい。", eq: `0.021 &lt; 0.05  →  <b class="cw">棄却する</b>` },
+    ],
+  },
+  pr: () => {
+    const n = 20, x = ri(12, 17), t = tailB(n, x), px = binomP(n, .5, x), yes = t < .05;
+    const v = b => b ? "出やすいと判断できる" : "出やすいとは言えない";
+    return {
+      title: "判定する", problem: `コインを ${n} 回投げたら 表が <b>${x} 回</b>。表が出やすいと判断できるか（有意水準 5%、片側）。P(X ≧ ${x}) と判定は？`,
+      p: { n, p0: .5, x, alpha: .05 }, txt: true,
+      choices: choices4(`P ≈ ${fmt(t, 4)} → ${v(yes)}`, [`P ≈ ${fmt(t, 4)} → ${v(!yes)}`, `P ≈ ${fmt(px, 4)} → ${v(px < .05)}`, `P ≈ ${fmt(1 - t + px, 4)} → ${v(false)}`, `P ≈ ${fmt(px, 4)} → ${v(px >= .05)}`]),
+      hint: ["P(X = x) だけでなく、x 回 <b>以上</b> 全部の確率をたす", "その確率が 0.05 より小さければ 棄却"],
+      steps: [
+        { say: "仮説：ふつうのコイン（p = 1/2）。", eq: "H₀：p = 1/2" },
+        { say: `実際は ${x} 回。`, eq: `X = ${x}` },
+        { say: `${x} 回 <b>以上</b> の確率をたす：≈ <b>${fmt(t, 4)}</b>。`, eq: `P(X ≧ ${x}) ≈ ${fmt(t, 4)}` },
+        { say: yes ? `${fmt(t, 4)} &lt; 0.05 → <b>棄却</b>。表が出やすいと判断できる。` : `${fmt(t, 4)} ≧ 0.05 → 棄却できない。表が出やすいとは <b>言えない</b>。`, eq: `<b class="${yes ? "cw" : "cb"}">${yes ? "棄却する" : "棄却できない"}</b>` },
+      ],
+    };
+  },
+  ap: {
+    title: "新薬の効果", problem: "これまでの薬で治る確率は 60%。新薬を 100 人に使ったら <b>70 人</b> 治った。新薬は効果があると言えるか（有意水準 5%、片側。正規分布で近似）。",
+    p: { mode: "norm", m: 60, sd: Math.sqrt(24), x: 70 }, txt: true,
+    choices: ["z ≈ 2.04 > 1.645 → 効果があると言える", "z ≈ 2.04 だが 0.05 より大きい → 言えない", "z ≈ 0.10 → 言えない", "70 > 60 なので 必ず効果がある"],
+    hint: ["仮説「効果なし（p = 0.6）」で m = 60、σ = √(100 × 0.6 × 0.4)", "z = (70 − 60)/σ を 1.645 とくらべる"],
+    steps: [
+      { say: "仮説：「新薬も 60%（効果なし）」。治る人数 X は B(100, 0.6) ≒ 正規分布 m = 60、σ = √24 ≈ 4.9。", eq: "m = 60,  σ = √24 ≈ 4.90" },
+      { say: "実際は 70 人：z = (70 − 60)/4.9 ≈ <b>2.04</b>。", eq: "z = (70 − 60) ÷ 4.90 ≈ 2.04" },
+      { say: "片側 5% の境目は <b>z = 1.645</b>（右はしの 5% が 棄却域）。", eq: "棄却域：z ≧ 1.645" },
+      { say: "2.04 は棄却域に入る → 仮説を棄却 → <b>効果があると言える</b>。", eq: `<b class="cw">効果があると言える</b>` },
+    ],
+  },
+  summary: ["① 「差がない・ふつう」の仮説を立てる", "② その仮説のもとで、結果 <b>以上</b> になる確率を求める", "③ 有意水準（5% など）より小さければ <b>棄却</b>"],
+});
+</script>
+<script>
+"use strict";
+/* ===== はじめる ===== */
+$("#nextBtn").addEventListener("click", next);
+$("#prevBtn").addEventListener("click", prev);
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input, textarea")) return;
+  if (e.key === "ArrowRight") { e.preventDefault(); next(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+});
+const FZ = ["", "fz1", "fz2"];
+let fz = store.get("fz", 0);
+const applyFz = () => { document.documentElement.classList.remove("fz1", "fz2"); if (FZ[fz]) document.documentElement.classList.add(FZ[fz]); };
+applyFz();
+$("#fzBtn").addEventListener("click", () => { fz = (fz + 1) % 3; store.set("fz", fz); applyFz(); render(); });
+const th = store.get("theme", null);
+if (th) document.documentElement.dataset.theme = th;
+$("#themeBtn").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.dataset.theme = dark ? "light" : "dark"; store.set("theme", dark ? "light" : "dark");
+});
+$("#maxBtn").addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen(); else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+});
+let rsT;
+new ResizeObserver(() => { clearTimeout(rsT); rsT = setTimeout(draw, 60); }).observe($("#stage"));
+window.addEventListener("hashchange", () => { const [id, pi] = location.hash.slice(1).split("/"); if (UNITS.some(u => u.id === id) && (id !== S.u.id || +pi !== S.pi)) openUnit(id, pi == null ? null : +pi); });
+{
+  const [id, pi] = location.hash.slice(1).split("/");
+  openUnit(UNITS.some(u => u.id === id) ? id : store.get("last", UNITS[0].id), pi == null || pi === "" ? null : +pi);
+}
+</script>
+</body>
+</html>
